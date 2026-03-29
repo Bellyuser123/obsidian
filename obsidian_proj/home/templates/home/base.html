@@ -8,6 +8,111 @@
 <title>OBSIDIAN — ACM DPGU Hackathon</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@300;400;600;700&family=VT323&display=swap" rel="stylesheet">
 <link rel="stylesheet" type="text/css" href="{% static 'home/css/style.css' %}">
+  <style>
+  /* ── USER MENU (authenticated state) ── */
+  .nav-user {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-left: 8px;
+  }
+
+  /* Avatar circle — shows first letter of username */
+  .nav-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 0;                              /* square, Minecraft feel */
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 11px;
+    color: #fff;
+    flex-shrink: 0;
+    box-shadow: 0 0 12px rgba(124,58,237,0.45);
+    transition: box-shadow 0.2s;
+    cursor: pointer;
+  }
+
+  .nav-user:hover .nav-avatar {
+    box-shadow: 0 0 20px rgba(0,229,204,0.5);
+  }
+
+  /* Username — clickable, goes to profile */
+  .nav-username {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--muted2);
+    text-decoration: none;
+    text-transform: lowercase;
+    transition: color 0.2s;
+    white-space: nowrap;
+  }
+
+  .nav-username:hover { color: var(--cyan); }
+
+  /* Online indicator dot */
+  .nav-user-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    position: relative;
+    text-decoration: none;
+  }
+
+  .nav-online-dot {
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 8px;
+    height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    border: 2px solid var(--obsidian);
+    animation: dot-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes dot-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(34,217,116,0.5); }
+    50%       { box-shadow: 0 0 0 4px rgba(34,217,116,0); }
+  }
+
+  /* Separator pipe */
+  .nav-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    margin: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* Logout button */
+  .nav-logout {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 7px 13px;
+    border: 1px solid rgba(249,115,22,0.2);
+    background: transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+    cursor: pointer;
+  }
+
+  .nav-logout:hover {
+    color: var(--lava);
+    border-color: rgba(249,115,22,0.5);
+    background: rgba(249,115,22,0.06);
+    box-shadow: 0 0 14px rgba(249,115,22,0.12);
+  }
+</style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -19,17 +124,31 @@
 
 <!-- NAV -->
 <nav>
-  <div class="nav-logo">OBS<span>■</span>DIAN</div>
+  <a href=".."><div class="nav-logo">OBS<span>■</span>DIAN</div>
   <ul class="nav-links">
     <li><a href="#about">About</a></li>
-    <li><a href="#events">Events</a></li>
+    <li><a href="#contest">Contests</a></li>
     <li><a href="#leaderboard">Ranks</a></li>
     <li><a href="#how">Guide</a></li>
   </ul>
+  </a>
   {% if user.is_authenticated %}
-      <li><a href="{% url 'profile' %}">My Profile</a></li>
-      <li><a href="{% url 'logout' %}">Logout</a></li>
-      <div class="nav-brand-name" style="margin-left: 10px;">{{ user.username }}</div>
+      <div class="nav-sep"></div>
+      <div class="nav-user">
+        <a href="{% url 'profile' %}" class="nav-user-wrap" title="View Profile">
+          <div class="nav-avatar">
+            {{ user.username|first|upper }}
+          </div>
+          <div class="nav-online-dot"></div>
+        </a>
+        <a href="{% url 'profile' %}" class="nav-username">
+          {{ user.username }}
+        </a>
+        <div class="nav-sep"></div>
+        <a href="{% url 'logout' %}" class="nav-logout">
+          ⏻ &nbsp;Logout
+        </a>
+      </div>
     {% else %}
   <a href="{% url 'auth' %}">
   <button class="nav-cta">Sign In</button>
@@ -54,7 +173,7 @@
       <div class="footer-col">
         <h4>Platform</h4>
         <ul>
-          <li><a href="#">Events</a></li>
+          <li><a href="#">Contest</a></li>
           <li><a href="#">Leaderboard</a></li>
           <li><a href="#">Teams</a></li>
           <li><a href="#">Projects</a></li>

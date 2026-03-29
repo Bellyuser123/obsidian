@@ -41,11 +41,15 @@ def auth_view(request):
                 messages.error(request, "An unexpected error occurred. Try again.")
 
         elif "login" in request.POST:
-            user = authenticate(username=..., password=...)
-            if user:
+            u_name = request.POST.get('username')
+            p_word = request.POST.get('password')
+            user = authenticate(request, username=u_name, password=p_word)
+            if user is not None:
                 login(request, user)
                 return redirect('main-home')
-
+            else:
+                messages.error(request, "Invalid username or password.")
+                return render(request, 'home/obsidian-auth.html')
     return render(request, 'home/register.html')
 
 
@@ -60,4 +64,3 @@ def profile_view(request):
 
 def home(request):
     return render(request, 'home/home.html')
-
