@@ -1,0 +1,739 @@
+{% extends 'home/base.html' %}
+{% load static %}
+{% load home_extras %}
+
+{% block extra_css %}
+<style>
+/* Hide global nav for dashboard */
+nav { display: none !important; }
+
+/* Dashboard Header */
+.dash-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 20px 36px;
+  position: fixed;
+  top: 0;
+  width: 100%;
+  z-index: 1000;
+  background: rgba(8, 8, 14, 0.4);
+  backdrop-filter: blur(10px);
+}
+
+.dash-profile {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  text-decoration: none;
+  justify-self: start;
+}
+
+.dash-logo {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: var(--cyan);
+  text-shadow: 0 0 20px var(--cyan);
+  text-decoration: none;
+  justify-self: center;
+}
+.dash-logo span { color: var(--purple); }
+
+.dash-right {
+  justify-self: end;
+}
+
+.dash-logout {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 8px 16px;
+  border: 1px solid rgba(255, 92, 26, 0.22);
+  background: transparent;
+  transition: all 0.2s;
+  cursor: none;
+}
+
+.dash-logout:hover {
+  color: var(--lava);
+  border-color: rgba(255, 92, 26, 0.5);
+  background: rgba(255, 92, 26, 0.06);
+  box-shadow: 0 0 14px rgba(255, 92, 26, 0.12);
+}
+
+/* ════════════════════════════════════════
+   TERMINAL VARIABLES & FONTS
+════════════════════════════════════════ */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+:root {
+  --ob-term-bg:     #040804;
+  --ob-cyan:        #00e5cc;
+  --ob-green:       #39ff14;
+  --ob-green-dim:   #98c379;
+  --ob-yellow:      #e5c07b;
+  --mn: 'JetBrains Mono', monospace;
+}
+
+/* ════════════════════════════════════════
+   TERMINAL SECTION
+════════════════════════════════════════ */
+.ob-term-wrap { padding: 24px 36px 0; }
+
+.ob-terminal {
+  width: 100%;
+  height: 44vh;
+  min-height: 320px;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  background: var(--ob-term-bg);
+  border: 1px solid #182818;
+  /* Sharp pixel-cut corners — top-right + bottom-left */
+  clip-path: polygon(
+    0 0,
+    calc(100% - 18px) 0,
+    100% 18px,
+    100% 100%,
+    18px 100%,
+    0 calc(100% - 18px)
+  );
+  box-shadow:
+    0 0 0 1px #0c180c,
+    0 0 60px rgba(57,255,20,.055),
+    0 0 120px rgba(57,255,20,.02),
+    0 32px 80px rgba(0,0,0,.75);
+  overflow: hidden;
+  position: relative;
+}
+
+/* CRT scanline overlay */
+.ob-terminal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0px, transparent 2px,
+    rgba(0,0,0,.2) 2px, rgba(0,0,0,.2) 3px
+  );
+  pointer-events: none;
+  z-index: 20;
+}
+
+/* ── Title bar ── */
+.ob-titlebar {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 14px;
+  background: #0c160c;
+  border-bottom: 1px solid #162516;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 30;
+}
+.ob-dots { display: flex; gap: 7px; }
+.ob-dot  { width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0; }
+.ob-dot-r { background: #ff5f56; }
+.ob-dot-y { background: #ffbd2e; }
+.ob-dot-g { background: #27c93f; box-shadow: 0 0 6px rgba(39,201,63,.5); }
+.ob-tab-title {
+  flex: 1; text-align: center;
+  font-family: var(--mn); font-size: 10.5px;
+  color: #3a5a3a; letter-spacing: 1.5px;
+}
+.ob-tab-title .hl { color: var(--ob-green); }
+
+/* ── Terminal body ── */
+.ob-term-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 20px 16px;
+  font-family: var(--mn);
+  font-size: 12.5px;
+  line-height: 1.72;
+  position: relative;
+  z-index: 10;
+  scrollbar-width: thin;
+  scrollbar-color: #1a3a1a #040804;
+  /* Phosphor flicker — subtle, periodic */
+  animation: ob-flicker 9s ease-in-out infinite;
+}
+.ob-term-body::-webkit-scrollbar { width: 4px; }
+.ob-term-body::-webkit-scrollbar-track { background: #040804; }
+.ob-term-body::-webkit-scrollbar-thumb { background: #1a3a1a; }
+
+@keyframes ob-flicker {
+  0%,89%,91%,93%,100% { opacity: 1; }
+  90%  { opacity: 0.82; }
+  92%  { opacity: 0.95; }
+}
+
+/* Terminal text roles */
+.tc-prompt { color: var(--ob-green); display: block; white-space: pre; }
+.tc-bot    { color: var(--ob-green); display: block; }
+.tc-cmd    { color: #ffffff; font-weight: 500; }
+.tc-out    { color: var(--ob-green-dim); display: block; }
+.tc-green  { color: var(--ob-green); }
+.tc-cyan   { color: var(--ob-cyan); }
+.tc-yellow { color: var(--ob-yellow); }
+.tc-gray   { color: #4a5a4a; }
+.tc-table  { color: var(--ob-green-dim); font-size: 11.5px; display: block; white-space: pre; }
+.tc-blank  { display: block; height: 5px; }
+
+/* Block cursor */
+.tc-cursor {
+  display: inline-block;
+  width: 8px; height: 13px;
+  background: var(--ob-green);
+  vertical-align: middle;
+  margin-left: 2px;
+  animation: tc-blink 1.1s step-end infinite;
+  box-shadow: 0 0 8px var(--ob-green);
+}
+@keyframes tc-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+/* Lines hidden until JS reveals them */
+.tl     { display: none; }
+.tl.vis { display: block; }
+
+.dashboard {
+  padding-top: 40px;
+  min-height: 100vh;
+  position: relative;
+  z-index: 10;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* ─────────────────────────────────────────
+   IDENTITY BAR
+───────────────────────────────────────── */
+.tui-status-bar {
+  display: flex;
+  align-items: center;
+  background: #0a0a0f;
+  border: 1px solid var(--border);
+  border-top: none;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  margin: 0 24px 40px;
+  overflow: hidden;
+}
+
+.tui-block {
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-right: 1px solid var(--border);
+  color: var(--muted2);
+}
+
+.tui-block.alert { color: var(--green); }
+
+/* ─────────────────────────────────────────
+   SECTION 2 · ARENA PROTOCOLS (HOME VIBE)
+───────────────────────────────────────── */
+.arena-section {
+  padding: 60px 36px;
+  position: relative;
+  z-index: 10;
+}
+
+.tui-tabs {
+  display: flex;
+  gap: 10px;
+  margin: 32px 0;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1px;
+}
+
+.tui-tab {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 12px 20px;
+  cursor: none;
+  transition: all 0.2s;
+  letter-spacing: 1px;
+}
+
+.tui-tab:hover { color: var(--white); }
+
+.tui-tab.active {
+  color: var(--cyan);
+  border: 1px solid var(--border);
+  border-bottom: 2px solid var(--cyan);
+  background: var(--surface);
+}
+
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fade-in 0.3s ease; }
+
+.events-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+.event-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.event-card:hover {
+  border-color: var(--cyan);
+  transform: translateY(-5px);
+  box-shadow: 0 10px 30px rgba(0, 255, 229, 0.1);
+}
+
+.event-status {
+  display: inline-block;
+  font-size: 8px;
+  font-family: 'Press Start 2P', monospace;
+  padding: 4px 8px;
+  margin-bottom: 16px;
+  letter-spacing: 1px;
+}
+
+.event-status.live { background: rgba(57, 255, 20, 0.1); color: var(--green); border: 1px solid var(--green); }
+.event-status.upcoming { background: rgba(123, 47, 255, 0.1); color: var(--purple); border: 1px solid var(--purple); }
+
+.event-name {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 11px;
+  color: var(--white);
+  margin-bottom: 12px;
+  line-height: 1.6;
+}
+
+.event-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-bottom: 20px;
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.event-meta span::before { content: '▸ '; color: var(--cyan); }
+.event-meta span.prize-meta::before { content: '🏆 '; color: var(--cyan); }
+
+.event-timer {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.count-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 8px 12px;
+  text-align: center;
+  min-width: 65px;
+}
+
+.count-num {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  color: var(--cyan);
+  display: block;
+}
+
+.count-label {
+  font-size: 7px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  margin-top: 4px;
+  display: block;
+}
+
+.dg-connect-btn {
+  display: block;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  background: transparent;
+  color: var(--cyan);
+  padding: 12px;
+  border: 1px solid var(--cyan);
+  text-decoration: none;
+  text-align: center;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  transition: all 0.2s;
+}
+
+.dg-connect-btn:hover {
+  background: var(--cyan);
+  color: var(--obsidian);
+}
+
+@keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 1024px) {
+  .events-grid { grid-template-columns: 1fr 1fr; }
+}
+@media (max-width: 768px) {
+  .events-grid { grid-template-columns: 1fr; }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<header class="dash-header">
+  <a href="{% url 'profile' %}" class="dash-profile">
+    <div class="nav-avatar">
+      {{ user.username|first|upper }}
+    </div>
+    <span class="nav-username">{{ user.username }}</span>
+  </a>
+
+  <a href="{% url 'main-home' %}" class="dash-logo">
+    OBS<span>■</span>DIAN
+  </a>
+
+  <div class="dash-right">
+    <a href="{% url 'logout' %}" class="dash-logout">
+      ⏻ &nbsp;Logout
+    </a>
+  </div>
+</header>
+
+<div class="dashboard">
+
+  <div class="ob-term-wrap">
+    <div class="ob-terminal" role="region" aria-label="Obsidian system terminal">
+
+      <div class="ob-titlebar">
+        <div class="ob-dots">
+          <span class="ob-dot ob-dot-r"></span>
+          <span class="ob-dot ob-dot-y"></span>
+          <span class="ob-dot ob-dot-g"></span>
+        </div>
+        <div class="ob-tab-title">
+          root&#64;<span class="hl">obsidian</span>-dpgu &nbsp;·&nbsp; bash &nbsp;·&nbsp; /root/dashboard
+        </div>
+      </div>
+
+      <div class="ob-term-body" id="termBody">
+
+        <span class="tl" id="tl-boot">
+          <span class="tc-out"><span class="tc-cyan">Obsidian</span> kernel 5.19.0-kali2-amd64  ·  ACM DPGU  ·  Season III</span>
+        </span>
+        <span class="tl" id="tl-boot-b"><span class="tc-blank"></span></span>
+
+        <span class="tl" id="tl-p1">
+          <span class="tc-prompt">┌──(<span style="color:#c792ea">root</span>㉿<span style="color:#61afef">obsidian</span>)-[<span style="color:#e5c07b">~</span>]</span>
+          <span class="tc-bot">└─<span style="color:#39ff14">#</span> <span class="tc-cmd" id="tc1"></span></span>
+        </span>
+
+        <span class="tl" id="tl-o1">
+          <span class="tc-out"><span class="tc-green">{{ user.username }}</span></span>
+          {# Django: logged-in username — from request.user #}
+        </span>
+
+        <span class="tl" id="tl-b1"><span class="tc-blank"></span></span>
+
+        <span class="tl" id="tl-p2">
+          <span class="tc-prompt">┌──(<span style="color:#c792ea">root</span>㉿<span style="color:#61afef">obsidian</span>)-[<span style="color:#e5c07b">~</span>]</span>
+          <span class="tc-bot">└─<span style="color:#39ff14">#</span> <span class="tc-cmd" id="tc2"></span></span>
+        </span>
+
+        <span class="tl" id="tl-o2a">
+          <span class="tc-table tc-gray">Proto  Local Address          Foreign Addr         State       PID/Program</span>
+        </span>
+
+        <span class="tl" id="tl-o2b">
+          <span class="tc-table"><span class="tc-cyan">tcp    </span><span class="tc-green">127.0.0.1:8000         </span>0.0.0.0:*            <span class="tc-yellow">LISTEN</span>      <span class="tc-gray">1337/obsidian-node</span></span>
+        </span>
+
+        <span class="tl" id="tl-o2c">
+          <span class="tc-table"><span class="tc-cyan">tcp    </span><span class="tc-green">127.0.0.1:5432         </span>0.0.0.0:*            <span class="tc-yellow">LISTEN</span>      <span class="tc-gray">892/postgres</span></span>
+        </span>
+
+        <span class="tl" id="tl-o2d">
+          <span class="tc-table"><span class="tc-cyan">tcp6   </span><span class="tc-green">:::6379                </span>:::*                 <span class="tc-yellow">LISTEN</span>      <span class="tc-gray">744/redis-server</span></span>
+        </span>
+
+        <span class="tl" id="tl-o2e">
+          <span class="tc-table"><span class="tc-cyan">tcp6   </span><span class="tc-green">10.0.0.1:443           </span>:::*                 <span class="tc-yellow">LISTEN</span>      <span class="tc-gray">1338/obsidian-tls</span></span>
+        </span>
+
+        <span class="tl" id="tl-b2"><span class="tc-blank"></span></span>
+
+        <span class="tl" id="tl-p3">
+          <span class="tc-prompt">┌──(<span style="color:#c792ea">root</span>㉿<span style="color:#61afef">obsidian</span>)-[<span style="color:#e5c07b">~</span>]</span>
+          <span class="tc-bot">└─<span style="color:#39ff14">#</span> <span class="tc-cmd" id="tc3"></span></span>
+        </span>
+
+        <span class="tl" id="tl-o3a">
+          {# Django: profile.roll_no — from user's profile model #}
+          <span class="tc-out"><span class="tc-yellow">[SYS]</span>  Verifying Roll No: <span class="tc-green">{{ profile.roll_no|default:"██████" }}</span>  ...  <span class="tc-green">[ OK ]</span></span>
+        </span>
+
+        <span class="tl" id="tl-o3b">
+          <span class="tc-out"><span class="tc-yellow">[SYS]</span>  Generating ECDH-P256 keypair  ............  <span class="tc-green">[ OK ]</span></span>
+        </span>
+
+        <span class="tl" id="tl-o3c">
+          <span class="tc-out"><span class="tc-cyan">[OBS]</span>  Encrypted Handshake Complete. Node authenticated to cluster.</span>
+        </span>
+
+        <span class="tl" id="tl-b3"><span class="tc-blank"></span></span>
+
+        <span class="tl" id="tl-final">
+          <span class="tc-prompt">┌──(<span style="color:#c792ea">root</span>㉿<span style="color:#61afef">obsidian</span>)-[<span style="color:#e5c07b">~</span>]</span>
+          <span class="tc-bot">└─<span style="color:#39ff14">#</span> <span class="tc-cursor"></span></span>
+        </span>
+
+      </div></div></div>
+
+  <div class="tui-status-bar">
+    <div class="tui-block">ROLL NO: {{ profile.roll_no|default:"UNVERIFIED" }}</div>
+    <div class="tui-block">NODE: 127.0.0.1:8000</div>
+    <div class="tui-block alert">NODE_STATUS: ONLINE</div>
+  </div>
+
+  <div class="arena-section">
+    <div class="section-label">System Protocols</div>
+    <h2 class="section-title">Active <span>Arena</span> Syncs</h2>
+
+    <div class="tui-tabs">
+      <button class="tui-tab active" onclick="switchTab('live')">[ 01. LIVE_PROTOCOLS ]</button>
+      <button class="tui-tab" onclick="switchTab('upcoming')">[ 02. SCHEDULED_SYNCS ]</button>
+      <button class="tui-tab" onclick="switchTab('archived')">[ 03. ARCHIVES ]</button>
+    </div>
+
+    <div id="tab-live" class="tab-content active">
+      <div class="events-grid">
+        {% for contest in live_contests %}
+        <div class="event-card">
+          <div class="event-status live">LIVE NOW</div>
+          <h3 class="event-name">{{ contest.name|upper }}</h3>
+
+          <div class="event-tags" style="margin-bottom: 20px;">
+            {% if contest.tags %}
+              {% with contest.tags|split:"," as tag_list %}
+                {% for tag in tag_list %}
+                  <span class="tag">{{ tag|trim|upper }}</span>
+                {% endfor %}
+              {% endwith %}
+            {% else %}
+              <span class="tag">GENERAL</span>
+            {% endif %}
+          </div>
+
+          <div class="event-meta">
+            <span>{{ contest.start_time|duration:contest.end_time }}</span>
+            {% if contest.prize %}<span class="prize-meta">{{ contest.prize|upper }}</span>{% endif %}
+          </div>
+
+          <div class="event-timer">
+            <div class="count-box">
+              <span class="count-num">{{ contest.end_time|date:"H:i" }}</span>
+              <span class="count-label">ENDS</span>
+            </div>
+          </div>
+
+          <a href="#" class="dg-connect-btn">Enter Arena_</a>
+        </div>
+        {% empty %}
+        <div class="empty-data">NO LIVE PROTOCOLS DETECTED.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div id="tab-upcoming" class="tab-content">
+      <div class="events-grid">
+        {% for contest in upcoming_contests %}
+        <div class="event-card">
+          <div class="event-status upcoming">UPCOMING</div>
+          <h3 class="event-name">{{ contest.name|upper }}</h3>
+
+          <div class="event-tags" style="margin-bottom: 20px;">
+            {% if contest.tags %}
+              {% with contest.tags|split:"," as tag_list %}
+                {% for tag in tag_list %}
+                  <span class="tag">{{ tag|trim|upper }}</span>
+                {% endfor %}
+              {% endwith %}
+            {% else %}
+              <span class="tag">GENERAL</span>
+            {% endif %}
+          </div>
+
+          <div class="event-meta">
+            <span>{{ contest.start_time|duration:contest.end_time }}</span>
+            {% if contest.prize %}<span class="prize-meta">{{ contest.prize|upper }}</span>{% endif %}
+          </div>
+
+          <div class="event-timer">
+            <div class="count-box">
+              <span class="count-num">{{ contest.start_time|date:"H:i" }}</span>
+              <span class="count-label">STARTS</span>
+            </div>
+          </div>
+
+          <a href="#" class="dg-connect-btn">Enter Arena_</a>
+        </div>
+        {% empty %}
+        <div class="empty-data">NO SCHEDULED SYNCS FOUND.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div id="tab-archived" class="tab-content">
+      <div class="events-grid">
+        {% for contest in archived_contests %}
+        <div class="event-card" style="opacity: 0.6;">
+          <div class="event-status">ENDED</div>
+          <h3 class="event-name">{{ contest.name|upper }}</h3>
+
+          <div class="event-tags" style="margin-bottom: 20px;">
+            {% if contest.tags %}
+              {% with contest.tags|split:"," as tag_list %}
+                {% for tag in tag_list %}
+                  <span class="tag">{{ tag|trim|upper }}</span>
+                {% endfor %}
+              {% endwith %}
+            {% endif %}
+          </div>
+
+          <div class="event-meta">
+            <span>{{ contest.start_time|duration:contest.end_time }}</span>
+            {% if contest.prize %}<span class="prize-meta">{{ contest.prize|upper }}</span>{% endif %}
+          </div>
+
+          <a href="#" class="dg-connect-btn" style="border-color: var(--muted); color: var(--muted);">View Data_</a>
+        </div>
+        {% empty %}
+        <div class="empty-data">ARCHIVES EMPTY.</div>
+        {% endfor %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* ═══════════════════════════════════════════
+   TERMINAL TYPEWRITER — fast & mechanical
+═══════════════════════════════════════════ */
+const CMDS = [
+  {
+    promptId: 'tl-p1', targetId: 'tc1',
+    text: 'whoami',
+    outputs: ['tl-o1','tl-b1']
+  },
+  {
+    promptId: 'tl-p2', targetId: 'tc2',
+    text: 'netstat -lnpt | grep obsidian',
+    outputs: ['tl-o2a','tl-o2b','tl-o2c','tl-o2d','tl-o2e','tl-b2']
+  },
+  {
+    promptId: 'tl-p3', targetId: 'tc3',
+    text: 'sudo obsidian --init-handshake',
+    outputs: ['tl-o3a','tl-o3b','tl-o3c','tl-b3']
+  },
+];
+
+const termBody = document.getElementById('termBody');
+const wait = ms => new Promise(r => setTimeout(r, ms));
+
+function reveal(id) {
+  const el = document.getElementById(id);
+  if (el) { el.classList.add('vis'); termBody.scrollTop = termBody.scrollHeight; }
+}
+
+function typeText(id, text) {
+  return new Promise(resolve => {
+    const el = document.getElementById(id);
+    if (!el) { resolve(); return; }
+    let i = 0;
+    function tick() {
+      if (i < text.length) {
+        el.textContent += text[i++];
+        termBody.scrollTop = termBody.scrollHeight;
+        /* Fast base: 20ms · occasional keypress hesitation */
+        const pause = Math.random() < 0.08 ? 80 : 20 + Math.random() * 10;
+        setTimeout(tick, pause);
+      } else resolve();
+    }
+    tick();
+  });
+}
+
+async function runTerminal() {
+  await wait(450);
+  reveal('tl-boot');
+  await wait(100);
+  reveal('tl-boot-b');
+  await wait(320);
+
+  for (const cmd of CMDS) {
+    reveal(cmd.promptId);
+    await wait(50);
+    await typeText(cmd.targetId, cmd.text);
+    await wait(170); /* enter-key beat */
+    for (const oid of cmd.outputs) {
+      reveal(oid);
+      await wait(48);
+    }
+    await wait(280);
+  }
+
+  reveal('tl-final');
+  termBody.scrollTop = termBody.scrollHeight;
+}
+
+document.addEventListener('DOMContentLoaded', runTerminal);
+
+/* ═══════════════════════════════════════════
+   TUI TAB LOGIC
+═══════════════════════════════════════════ */
+function switchTab(tabId) {
+  document.querySelectorAll('.tui-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+  document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
+  document.getElementById(`tab-${tabId}`).classList.add('active');
+}
+
+/* ═══════════════════════════════════════════
+   LIVE COUNTDOWN ENGINE
+═══════════════════════════════════════════ */
+function fmtTime(secs) {
+  if (secs <= 0) return 'ENDED';
+  const d  = Math.floor(secs / 86400);
+  const h  = Math.floor((secs % 86400) / 3600);
+  const m  = Math.floor((secs % 3600) / 60);
+  const s  = secs % 60;
+  const pad = n => String(n).padStart(2, '0');
+  return d > 0 ? `${d}D ${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(h)}:${pad(m)}:${pad(s)}`;
+}
+
+(function initTimers() {
+  const timers = document.querySelectorAll('.row-timer[data-end]');
+  if (!timers.length) return;
+  setInterval(() => {
+    const now = Math.floor(Date.now() / 1000);
+    timers.forEach(el => {
+      const end = parseInt(el.dataset.end, 10);
+      if (!end) return; 
+      el.textContent = fmtTime(end - now);
+    });
+  }, 1000);
+})();
+</script>
+{% endblock %}

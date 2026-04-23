@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OBSIDIAN // DASHBOARD</title>
+
+  <!-- Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Press+Start+2P&family=VT323&display=swap">
+
+  <style>
+    :root {
+      /* Core Palette */
+      --obsidian: #0a0a0f;
+      --cyan: #00ffe5;
+      --purple: #7b2fff;
+      --lava: #ff5c1a;
+      --success-green: #0aff50;
+      --danger-red: #ff2a2a;
+
+      /* Glass & Borders */
+      --glass-bg: rgba(10, 10, 15, 0.85);
+      --glass-border: rgba(0, 255, 229, 0.35);
+      --glass-blur: 14px;
+
+      /* Typography */
+      --font-title: 'Press Start 2P', monospace;
+      --font-ui: 'JetBrains Mono', monospace;
+      --font-sub: 'VT323', monospace;
+
+      /* Pixel Clip Path */
+      --pixel-cut: polygon(
+        6px 0, calc(100% - 6px) 0,
+        100% 6px, 100% calc(100% - 6px),
+        calc(100% - 6px) 100%, 6px 100%,
+        0 calc(100% - 6px), 0 6px
+      );
+    }
+
+    /* Base Reset & Environment */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background-color: var(--obsidian);
+      color: #e0e0e0;
+      font-family: var(--font-ui);
+      overflow-x: hidden;
+      min-height: 100vh;
+    }
+
+    /* Pixel Grid Background */
+    .pixel-grid {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -2;
+      background-image:
+        linear-gradient(rgba(0, 255, 229, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 229, 0.1) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+    }
+
+    /* Matrix Rain Canvas */
+    #matrix-rain {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      z-index: -1;
+      opacity: 0.18;
+      pointer-events: none;
+    }
+
+    /* Scanlines Overlay */
+    .scanlines::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.25) 2px, rgba(0,0,0,0.25) 4px);
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .dashboard-wrapper {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 10px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* ================= SYSTEM HEADER ================= */
+    .system-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
+      padding: 12px 20px;
+      margin-bottom: 20px;
+      clip-path: var(--pixel-cut);
+      box-shadow: 0 0 15px rgba(0, 255, 229, 0.15);
+    }
+
+    .header-left, .header-center, .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .status-dot {
+      width: 10px; height: 10px;
+      background: var(--success-green);
+      box-shadow: 0 0 8px var(--success-green);
+      animation: pulse-dot 2s infinite;
+    }
+    .status-text {
+      font-family: var(--font-ui);
+      font-size: 0.75rem;
+      letter-spacing: 1px;
+      color: var(--success-green);
+      font-weight: bold;
+    }
+
+    .access-badge, .user-tag {
+      font-family: var(--font-sub);
+      font-size: 1rem;
+      color: var(--cyan);
+      background: rgba(0, 255, 229, 0.08);
+      padding: 4px 10px;
+      border: 1px dashed var(--glass-border);
+    }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid var(--danger-red);
+      color: var(--danger-red);
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: var(--font-title);
+      font-size: 1.2rem;
+      cursor: pointer;
+      clip-path: var(--pixel-cut);
+      transition: all 0.2s;
+    }
+    .btn-logout:hover {
+      background: var(--danger-red);
+      color: var(--obsidian);
+      box-shadow: 0 0 12px var(--danger-red);
+    }
+
+    /* ================= MAIN GRID ================= */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 7fr 3fr;
+      gap: 20px;
+    }
+
+    .panel {
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
+      padding: 20px;
+      clip-path: var(--pixel-cut);
+      position: relative;
+      box-shadow: inset 0 0 30px rgba(10, 10, 15, 0.8);
+    }
+
+    .panel-title {
+      font-family: var(--font-title);
+      font-size: 0.9rem;
+      color: var(--purple);
+      margin-bottom: 20px;
+      text-shadow: 0 0 8px var(--purple);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .panel-title::before {
+      content: '>';
+      color: var(--cyan);
+    }
+
+    /* Left: Active Protocols */
+    .protocol-card {
+      background: rgba(123, 47, 255, 0.05);
+      border: 1px solid var(--purple);
+      padding: 20px;
+      margin-bottom: 16px;
+      position: relative;
+      overflow: hidden;
+      clip-path: var(--pixel-cut);
+    }
+    .protocol-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: -100%;
+      width: 100%; height: 2px;
+      background: var(--cyan);
+      animation: scan-line 3s infinite linear;
+    }
+
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .live-tag {
+      background: var(--lava);
+      color: var(--obsidian);
+      font-family: var(--font-title);
+      font-size: 0.6rem;
+      padding: 4px 8px;
+      animation: blink 1s infinite;
+      clip-path: var(--pixel-cut);
+    }
+    .contest-name {
+      font-family: var(--font-title);
+      font-size: 1.1rem;
+      color: #fff;
+      line-height: 1.4;
+    }
+
+    .countdown {
+      font-family: var(--font-sub);
+      font-size: 2.8rem;
+      color: var(--cyan);
+      text-shadow: 0 0 15px var(--cyan);
+      margin: 15px 0 5px;
+    }
+    .module-count {
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      color: var(--glass-border);
+      letter-spacing: 1px;
+      margin-bottom: 15px;
+    }
+
+    .btn-enter {
+      width: 100%;
+      background: var(--cyan);
+      color: var(--obsidian);
+      font-family: var(--font-title);
+      font-size: 0.7rem;
+      padding: 14px;
+      border: none;
+      cursor: pointer;
+      clip-path: var(--pixel-cut);
+      transition: 0.2s;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+    .btn-enter:hover {
+      background: var(--purple);
+      color: #fff;
+      box-shadow: 0 0 20px var(--purple), 0 0 40px var(--purple);
+      transform: translateY(-2px);
+    }
+
+    /* Right: Identity Module */
+    .identity-card { text-align: center; }
+    .profile-pic {
+      width: 80px; height: 80px;
+      background: #222;
+      border: 2px solid var(--cyan);
+      margin: 0 auto 15px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2.5rem;
+      clip-path: var(--pixel-cut);
+      box-shadow: 0 0 15px rgba(0, 255, 229, 0.4);
+    }
+    .id-field { margin: 12px 0; text-align: left; }
+    .id-label {
+      font-family: var(--font-ui);
+      font-size: 0.65rem;
+      color: var(--purple);
+      display: block;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .id-value {
+      font-family: var(--font-sub);
+      font-size: 1.3rem;
+      color: #fff;
+      border-bottom: 1px solid var(--glass-border);
+      padding-bottom: 4px;
+      display: block;
+    }
+    .total-score {
+      margin: 20px 0;
+      padding: 15px;
+      background: rgba(123, 47, 255, 0.15);
+      border: 1px solid var(--purple);
+      clip-path: var(--pixel-cut);
+    }
+    .score-val {
+      font-family: var(--font-title);
+      font-size: 2.2rem;
+      color: var(--cyan);
+      text-shadow: 0 0 12px var(--cyan), 0 0 25px var(--purple);
+    }
+    .score-label { font-family: var(--font-ui); font-size: 0.6rem; color: var(--cyan); }
+
+    .skill-badge {
+      display: inline-block;
+      background: var(--obsidian);
+      border: 2px solid var(--lava);
+      padding: 8px 12px;
+      font-family: var(--font-ui);
+      font-size: 0.75rem;
+      color: var(--lava);
+      box-shadow: 0 0 10px rgba(255, 92, 26, 0.4);
+      clip-path: var(--pixel-cut);
+    }
+
+    /* ================= SECONDARY SECTION ================= */
+    .secondary-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-top: 20px;
+    }
+    .list-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
+      padding: 15px;
+      clip-path: var(--pixel-cut);
+      filter: grayscale(0.85) brightness(0.75);
+      transition: all 0.3s;
+    }
+    .list-card:hover {
+      filter: grayscale(0.2) brightness(0.95);
+      border-color: var(--cyan);
+      box-shadow: 0 0 10px rgba(0, 255, 229, 0.2);
+    }
+    .list-header { font-family: var(--font-title); font-size: 0.7rem; margin-bottom: 12px; color: var(--purple); }
+    .list-item {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px dashed rgba(255,255,255,0.1);
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+      color: #aaa;
+    }
+    .list-item span.status { font-size: 0.6rem; padding: 2px 6px; border: 1px solid #555; color: #777; clip-path: var(--pixel-cut); }
+
+    /* ================= ANIMATIONS ================= */
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    @keyframes pulse-dot { 0% { transform: scale(1); box-shadow: 0 0 8px var(--success-green); } 100% { transform: scale(1.4); box-shadow: 0 0 15px var(--success-green), 0 0 30px var(--success-green); } }
+    @keyframes scan-line { 0% { left: -100%; } 100% { left: 100%; } }
+
+    /* ================= RESPONSIVE ================= */
+    @media (max-width: 950px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .system-header { flex-direction: column; gap: 10px; align-items: flex-start; }
+      .header-center, .header-right { width: 100%; justify-content: space-between; }
+      .secondary-section { grid-template-columns: 1fr; }
+      .countdown { font-size: 2.2rem; }
+    }
+  </style>
+</head>
+<body class="scanlines">
+  <canvas id="matrix-rain"></canvas>
+  <div class="pixel-grid"></div>
+
+  <div class="dashboard-wrapper">
+    <!-- SYSTEM HEADER -->
+    <header class="system-header">
+      <div class="header-left">
+        <div class="status-dot"></div>
+        <span class="status-text">NODE_STATUS: ONLINE</span>
+      </div>
+      <div class="header-center">
+        <span class="access-badge">ACCESS_LEVEL: STUDENT</span>
+        <span class="user-tag">USER: {{ user.username }}</span>
+      </div>
+      <div class="header-right">
+        <button class="btn-logout" title="LOGOUT">X</button>
+      </div>
+    </header>
+
+    <!-- MAIN 2-COLUMN GRID -->
+    <main class="main-grid">
+      <!-- LEFT: Active Protocols -->
+      <section class="left-panel">
+        <h2 class="panel-title">ACTIVE PROTOCOLS</h2>
+
+        <div class="protocol-card">
+          <div class="card-header">
+            <span class="contest-name">DYNAMIC PROGRAMMING: DEEP DIVE</span>
+            <span class="live-tag">LIVE</span>
+          </div>
+          <div class="countdown" data-target="2026-04-15T23:59:59">02:14:09</div>
+          <div class="module-count">5 MODULES DETECTED | MAX SCORE: 500</div>
+          <button class="btn-enter">ENTER ARENA</button>
+        </div>
+
+        <div class="protocol-card">
+          <div class="card-header">
+            <span class="contest-name">GRAPH TRAVERSAL WARFARE</span>
+            <span class="live-tag">LIVE</span>
+          </div>
+          <div class="countdown" data-target="2026-04-14T18:00:00">04:32:15</div>
+          <div class="module-count">8 MODULES DETECTED | MAX SCORE: 800</div>
+          <button class="btn-enter">ENTER ARENA</button>
+        </div>
+      </section>
+
+      <!-- RIGHT: Identity Module -->
+      <aside class="right-panel">
+        <div class="panel-title">IDENTITY MODULE</div>
+        <div class="identity-card">
+          <div class="profile-pic">👤</div>
+          <div class="id-field">
+            <span class="id-label">FULL NAME</span>
+            <span class="id-value">Alex Chen</span>
+          </div>
+          <div class="id-field">
+            <span class="id-label">ROLL NUMBER</span>
+            <span class="id-value">CS-24-091</span>
+          </div>
+          <div class="id-field">
+            <span class="id-label">GLOBAL RANK</span>
+            <span class="id-value">#14</span>
+          </div>
+
+          <div class="total-score">
+            <span class="score-label">TOTAL ACCUMULATED SCORE</span>
+            <div class="score-val">12,450</div>
+          </div>
+          <div class="skill-badge">🔒 ALGORITHMIC OPERATOR</div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- BOTTOM: Upcoming & Archives -->
+    <section class="secondary-section">
+      <div class="list-card">
+        <div class="list-header">>> UPCOMING SYNCS</div>
+        <div class="list-item">
+          <span>TREE ALGORITHMS I</span>
+          <span class="status">SYNC: 48H</span>
+        </div>
+        <div class="list-item">
+          <span>HASH TABLE PROTOCOLS</span>
+          <span class="status">SYNC: 72H</span>
+        </div>
+        <div class="list-item">
+          <span>ACM ICPC REGIONAL PREP</span>
+          <span class="status">SYNC: 120H</span>
+        </div>
+      </div>
+
+      <div class="list-card">
+        <div class="list-header">>> HISTORICAL ARCHIVES</div>
+        <div class="list-item">
+          <span>BASIC ARRAYS & LOOPS</span>
+          <span class="status">COMPLETED | 480/500</span>
+        </div>
+        <div class="list-item">
+          <span>RECURSION FUNDAMENTALS</span>
+          <span class="status">COMPLETED | 210/300</span>
+        </div>
+        <div class="list-item">
+          <span>BIT MANIPULATION DRILLS</span>
+          <span class="status">COMPLETED | 650/700</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    /* MATRIX RAIN CANVAS */
+    const canvas = document.getElementById('matrix-rain');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    const chars = '01アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+    const fontSize = 14;
+    const columns = Math.floor(width / fontSize);
+    const drops = new Array(columns).fill(1);
+
+    function drawMatrix() {
+      ctx.fillStyle = 'rgba(10, 10, 15, 0.1)'; // Fade trail
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = '#00ffe5'; // Cyan text
+      ctx.font = fontSize + 'px monospace';
+
+      for (let i = 0; i < drops.length; i++) {
+        const text = chars[Math.floor(Math.random() * chars.length)];
+        ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+        if (drops[i] * fontSize > height && Math.random() > 0.975) {
+          drops[i] = 0;
+        }
+        drops[i]++;
+      }
+      requestAnimationFrame(drawMatrix);
+    }
+    drawMatrix();
+
+    /* COUNTDOWN TIMER LOGIC */
+    function initCountdowns() {
+      const timers = document.querySelectorAll('.countdown');
+      function update() {
+        timers.forEach(el => {
+          const target = new Date(el.dataset.target).getTime();
+          const now = Date.now();
+          const diff = target - now;
+
+          if (diff <= 0) {
+            el.textContent = "SESSION CLOSED";
+            el.style.color = "var(--danger-red)";
+            el.closest('.protocol-card').style.filter = "grayscale(1)";
+            el.closest('.protocol-card').querySelector('.btn-enter').style.display = "none";
+            return;
+          }
+
+          const h = Math.floor(diff / (1000 * 60 * 60)).toString().padStart(2, '0');
+          const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+          const s = Math.floor((diff % (1000 * 60)) / 1000).toString().padStart(2, '0');
+          el.textContent = `${h}:${m}:${s}`;
+        });
+      }
+      update();
+      setInterval(update, 1000);
+    }
+    document.addEventListener('DOMContentLoaded', initCountdowns);
+  </script>
+</body>
+</html>
