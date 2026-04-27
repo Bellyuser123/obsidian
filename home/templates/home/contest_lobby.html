@@ -1,0 +1,1002 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NETHER FORGE 2025 — Obsidian Arena</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   OBSIDIAN — CONTEST LOBBY
+   Cyberpunk / High-End Utility · No animations · Sharp edges
+═══════════════════════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #0a0a0f;
+  --surface:     #111120;
+  --surface-2:   #16162a;
+  --surface-3:   #1c1c34;
+  --border:      #2a2a48;
+  --border-dim:  #1e1e36;
+  --cyan:        #00ffe5;
+  --cyan-dim:    rgba(0,255,229,0.12);
+  --cyan-mid:    rgba(0,255,229,0.4);
+  --purple:      #7b2fff;
+  --purple-dim:  rgba(123,47,255,0.15);
+  --green:       #39ff6e;
+  --green-dim:   rgba(57,255,110,0.12);
+  --red:         #ff3c5a;
+  --red-dim:     rgba(255,60,90,0.15);
+  --yellow:      #f5c842;
+  --text:        #d0d0e8;
+  --text-dim:    #5a5a80;
+  --text-mid:    #8888aa;
+  --px:          'Press Start 2P', monospace;
+  --mn:          'JetBrains Mono', monospace;
+
+  /* Clip-path reusables */
+  --clip-sm:  polygon(0 0, calc(100% - 6px) 0,  100% 6px,  100% 100%, 6px 100%,  0 calc(100% - 6px));
+  --clip-md:  polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  --clip-lg:  polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  --clip-btn: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mn);
+  font-size: 13px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ensure pointer hidden and custom cursor enabled on this page */
+body { cursor: none; }
+
+/* Recreate the classic blue pixel cursor from the main site */
+.cursor {
+  width: 16px; height: 16px;
+  background: var(--cyan);
+  position: fixed;
+  top: 0; left: 0;
+  pointer-events: none;
+  z-index: 9999;
+  image-rendering: pixelated;
+  clip-path: polygon(0 0, 60% 0, 100% 40%, 100% 100%, 40% 100%, 0 60%);
+  transition: transform 0.1s;
+  mix-blend-mode: difference;
+}
+
+/* small decorative pixel grid and canvas (minimal) */
+.pixel-grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(124, 58, 237, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(124, 58, 237, 0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+  pointer-events: none;
+  z-index: 0;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 85%);
+}
+
+#matrixCanvas { position: fixed; inset: 0; opacity: 0.06; pointer-events: none; z-index: 1; }
+
+/* ════════════════════════════════════════
+   SCROLLBAR
+════════════════════════════════════════ */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); }
+* { scrollbar-width: thin; scrollbar-color: var(--border) var(--bg); }
+
+/* NAV BAR (scoped for lobby) */
+nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 28px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), transparent);
+  border-bottom: 1px solid var(--border-dim);
+  margin-bottom: 8px;
+}
+.nav-left { display:flex; align-items:center; gap:18px; }
+.nav-logo { font-family: var(--px); color: var(--cyan); letter-spacing:2px; font-size:16px; }
+.nav-logo span { color: var(--purple); margin-left:6px; }
+.nav-links { list-style:none; display:flex; gap:12px; align-items:center; }
+.nav-links a { color: var(--text-mid); font-family: var(--mn); text-decoration:none; font-size:12px; padding:6px 8px; border-radius:4px; }
+.nav-links a:hover { color: var(--text); background: rgba(255,255,255,0.02); }
+
+.nav-right { display:flex; align-items:center; gap:12px; }
+.nav-cta { font-family: var(--mn); font-weight:700; letter-spacing:1.5px; padding:8px 12px; background: transparent; color: var(--cyan); border:1px solid rgba(0,255,229,.25); clip-path: var(--clip-btn); cursor:pointer; }
+.nav-user { display:flex; align-items:center; gap:8px; }
+.nav-avatar { width:28px; height:28px; border-radius:6px; background: linear-gradient(180deg,var(--surface-2),var(--surface-3)); display:flex; align-items:center; justify-content:center; color:var(--cyan); font-weight:700; }
+.nav-username { color: var(--text); font-family: var(--mn); text-decoration:none; }
+.nav-logout { color: var(--text-mid); text-decoration:none; font-family: var(--mn); padding:6px 8px; }
+
+
+/* ════════════════════════════════════════
+   LAYOUT SHELL
+════════════════════════════════════════ */
+.lobby {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 28px;
+  gap: 0;
+}
+
+/* ════════════════════════════════════════
+   HEADER
+════════════════════════════════════════ */
+.lobby-header {
+  padding: 28px 0 22px;
+  border-bottom: 1px solid var(--border-dim);
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 20px;
+  align-items: end;
+}
+
+/* header-left intentionally uses default layout */
+
+.header-eyebrow {
+  font-family: var(--mn);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 3px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.header-eyebrow::before {
+  content: '';
+  display: block;
+  width: 18px; height: 1px;
+  background: var(--border);
+}
+
+.header-title {
+  font-family: var(--px);
+  font-size: clamp(13px, 2vw, 18px);
+  color: #fff;
+  letter-spacing: 2px;
+  line-height: 1.4;
+  margin-bottom: 12px;
+}
+.header-title span { color: var(--cyan); }
+
+.header-desc {
+  font-family: var(--mn);
+  font-size: 12.5px;
+  color: var(--text-mid);
+  max-width: 640px;
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+
+.header-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.badge {
+  font-family: var(--mn);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  padding: 4px 10px;
+  border: 1px solid;
+  clip-path: var(--clip-sm);
+}
+.badge-cyan   { color: var(--cyan);   border-color: rgba(0,255,229,.35); background: var(--cyan-dim); }
+.badge-purple { color: #b88cff;       border-color: rgba(123,47,255,.4); background: var(--purple-dim); }
+.badge-gray   { color: var(--text-mid); border-color: var(--border);     background: var(--surface); }
+
+/* Header right — contest status */
+.header-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.status-label {
+  font-family: var(--mn);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+
+.status-pill {
+  font-family: var(--px);
+  font-size: 7px;
+  letter-spacing: 1.5px;
+  padding: 6px 14px;
+  clip-path: var(--clip-sm);
+}
+.status-live {
+  color: var(--green);
+  background: var(--green-dim);
+  border: 1px solid rgba(57,255,110,.3);
+}
+
+/* ════════════════════════════════════════
+   MAIN SPLIT
+════════════════════════════════════════ */
+.lobby-main {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 20px;
+  padding: 20px 0;
+  min-height: 0; /* allow children to scroll */
+  align-items: start;
+}
+
+/* ────────────────────────────────────
+   LEFT PANEL — PROBLEM MATRIX
+──────────────────────────────────── */
+.panel-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+}
+
+.panel-heading {
+  font-family: var(--px);
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  color: var(--cyan);
+  padding: 0 0 12px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid var(--border-dim);
+  margin-bottom: 0;
+}
+.panel-heading::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(to right, var(--border-dim), transparent);
+}
+
+/* Table container */
+.problem-matrix {
+  background: var(--surface);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  overflow: hidden;
+}
+
+/* Table head */
+.matrix-head {
+  display: grid;
+  grid-template-columns: 52px 1fr 80px 130px 110px;
+  gap: 0;
+  padding: 10px 16px;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+}
+.matrix-head-cell {
+  font-family: var(--mn);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+}
+.matrix-head-cell.right { text-align: right; }
+.matrix-head-cell.center { text-align: center; }
+
+/* Table body */
+.matrix-body {
+  max-height: calc(100vh - 340px);
+  min-height: 300px;
+  overflow-y: auto;
+}
+
+/* Problem row */
+.p-row {
+  display: grid;
+  grid-template-columns: 52px 1fr 80px 130px 110px;
+  gap: 0;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border-dim);
+  align-items: center;
+  position: relative;
+  transition: background 0.08s;
+}
+.p-row::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background 0.08s;
+}
+.p-row:hover { background: rgba(255,255,255,0.02); }
+.p-row:hover::before { background: var(--border); }
+.p-row:last-child { border-bottom: none; }
+
+/* Status-specific left border */
+.p-row.solved::before   { background: var(--green); }
+.p-row.attempted::before { background: var(--yellow); }
+.p-row.locked { opacity: 0.45; pointer-events: none; }
+
+/* Row cells */
+.p-id {
+  font-family: var(--mn);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+
+.p-name {
+  font-family: var(--mn);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  letter-spacing: 0.5px;
+  padding-right: 12px;
+}
+.p-row.solved .p-name { color: var(--green); }
+
+.p-diff {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.diff-pip {
+  width: 5px; height: 5px;
+  clip-path: polygon(50% 0%, 100% 100%, 0% 100%); /* triangle */
+}
+.diff-easy   .diff-pip { background: var(--green); }
+.diff-medium .diff-pip { background: var(--yellow); }
+.diff-hard   .diff-pip { background: var(--red); }
+.diff-label {
+  font-family: var(--mn);
+  font-size: 9.5px;
+  letter-spacing: 1px;
+}
+.diff-easy   .diff-label { color: var(--green); }
+.diff-medium .diff-label { color: var(--yellow); }
+.diff-hard   .diff-label { color: var(--red); }
+
+.p-pts {
+  font-family: var(--mn);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cyan);
+  letter-spacing: 1px;
+  text-align: right;
+  padding-right: 4px;
+}
+.p-row.solved .p-pts { color: var(--green); }
+
+.p-status {
+  display: flex;
+  justify-content: center;
+}
+
+.status-tag {
+  font-family: var(--mn);
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  padding: 3px 8px;
+  border: 1px solid;
+  clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
+  white-space: nowrap;
+}
+.tag-unattempted { color: var(--text-dim); border-color: var(--border); background: transparent; }
+.tag-solved      { color: var(--green);    border-color: rgba(57,255,110,.4); background: var(--green-dim); }
+.tag-attempted   { color: var(--yellow);   border-color: rgba(245,200,66,.35); background: rgba(245,200,66,.08); }
+.tag-locked      { color: var(--text-dim); border-color: var(--border-dim); background: transparent; opacity: 0.5; }
+
+.p-action { display: flex; justify-content: flex-end; }
+
+.btn-initiate {
+  font-family: var(--mn);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 6px 14px;
+  background: transparent;
+  color: var(--cyan);
+  border: 1px solid rgba(0,255,229,.4);
+  clip-path: var(--clip-btn);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.08s, color 0.08s, box-shadow 0.08s;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-initiate:hover {
+  background: var(--cyan);
+  color: #000;
+  box-shadow: 0 0 16px rgba(0,255,229,.25);
+}
+.p-row.solved .btn-initiate {
+  color: var(--green);
+  border-color: rgba(57,255,110,.4);
+}
+.p-row.solved .btn-initiate:hover {
+  background: var(--green);
+  color: #000;
+}
+
+/* Diff column */
+.p-diff-cell { display: flex; align-items: center; }
+
+/* ────────────────────────────────────
+   RIGHT PANEL — TELEMETRY
+──────────────────────────────────── */
+.panel-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: sticky;
+  top: 20px;
+}
+
+/* Generic telemetry card */
+.telem-card {
+  background: var(--surface);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  padding: 16px;
+  position: relative;
+}
+
+.telem-label {
+  font-family: var(--px);
+  font-size: 7px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.telem-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border-dim);
+}
+
+/* ── Timer card ── */
+.timer-display {
+  font-family: var(--mn);
+  font-size: clamp(28px, 4vw, 38px);
+  font-weight: 700;
+  letter-spacing: 4px;
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  padding: 8px 0;
+  line-height: 1;
+  /* Subtle inset glow */
+  text-shadow: 0 0 24px rgba(0,255,229,.25), 0 0 48px rgba(0,255,229,.08);
+}
+.timer-display.warning { color: var(--red); text-shadow: 0 0 24px rgba(255,60,90,.3); }
+
+.timer-sub {
+  text-align: center;
+  font-family: var(--mn);
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  margin-top: 8px;
+}
+
+/* ── Leaderboard ── */
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.lb-row {
+  display: grid;
+  grid-template-columns: 22px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--border-dim);
+}
+.lb-row:last-child { border-bottom: none; }
+
+.lb-rank {
+  font-family: var(--mn);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+}
+.lb-rank.gold   { color: #f5c842; }
+.lb-rank.silver { color: #aab0c0; }
+.lb-rank.bronze { color: #c87a40; }
+
+.lb-name {
+  font-family: var(--mn);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lb-row:first-child .lb-name { color: #fff; }
+
+.lb-solved {
+  font-family: var(--mn);
+  font-size: 10px;
+  color: var(--text-dim);
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+.lb-pts {
+  font-family: var(--mn);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--cyan);
+  letter-spacing: 1px;
+  text-align: right;
+  white-space: nowrap;
+}
+.lb-row:first-child .lb-pts { color: #f5c842; }
+
+/* ── Blackout overlay ── */
+.blackout-block {
+  display: none;
+  background: rgba(255,60,90,.08);
+  border: 1px solid rgba(255,60,90,.4);
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  padding: 16px;
+  text-align: center;
+}
+.blackout-block .blackout-icon {
+  font-family: var(--mn);
+  font-size: 18px;
+  color: var(--red);
+  margin-bottom: 10px;
+  display: block;
+}
+.blackout-block .blackout-msg {
+  font-family: var(--px);
+  font-size: 7px;
+  color: var(--red);
+  letter-spacing: 1.5px;
+  line-height: 1.9;
+}
+
+/* When .blackout is applied to .panel-right */
+.panel-right.blackout .leaderboard-list { display: none; }
+.panel-right.blackout .blackout-block   { display: block; }
+
+/* ── My Team card ── */
+.team-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-dim);
+}
+.team-row:last-child { border-bottom: none; }
+
+.team-member-name {
+  font-family: var(--mn);
+  font-size: 11px;
+  color: var(--text);
+}
+.team-member-you {
+  font-family: var(--mn);
+  font-size: 8.5px;
+  color: var(--cyan);
+  letter-spacing: 1px;
+  padding: 2px 6px;
+  border: 1px solid rgba(0,255,229,.3);
+  clip-path: polygon(0 0, calc(100% - 3px) 0, 100% 3px, 100% 100%, 3px 100%, 0 calc(100% - 3px));
+  margin-left: 8px;
+}
+.team-status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+.dot-online  { background: var(--green); }
+.dot-offline { background: var(--text-dim); }
+.team-left {
+  display: flex;
+  align-items: center;
+}
+.team-score {
+  font-family: var(--mn);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-mid);
+  letter-spacing: 1px;
+}
+
+/* ════════════════════════════════════════
+   BOTTOM PROGRESS HUD
+════════════════════════════════════════ */
+.lobby-hud {
+  padding: 14px 0 18px;
+  border-top: 1px solid var(--border-dim);
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+
+.hud-label {
+  font-family: var(--px);
+  font-size: 6.5px;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.hud-label span { color: var(--cyan); }
+
+.hud-bar {
+  display: flex;
+  gap: 3px;
+  flex: 1;
+}
+
+.hud-block {
+  flex: 1;
+  height: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--border-dim);
+  clip-path: polygon(2px 0%, calc(100% - 2px) 0%, 100% 2px, 100% 100%, calc(100% - 2px) 100%, 2px 100%, 0% calc(100% - 2px), 0% 2px);
+}
+.hud-block.lit {
+  background: var(--cyan);
+  border-color: var(--cyan);
+  box-shadow: 0 0 8px rgba(0,255,229,.35);
+}
+.hud-block.lit-partial {
+  background: rgba(0,255,229,.4);
+  border-color: rgba(0,255,229,.5);
+}
+
+.hud-right {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.hud-score-box {
+  font-family: var(--mn);
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--text-mid);
+}
+.hud-score-box strong {
+  color: var(--cyan);
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* ════════════════════════════════════════
+   UTILITY DIVIDER
+════════════════════════════════════════ */
+.v-divider {
+  width: 1px;
+  background: var(--border-dim);
+  align-self: stretch;
+}
+
+/* ════════════════════════════════════════
+   CORNER ACCENT — decorative only
+════════════════════════════════════════ */
+.corner-tr {
+  position: absolute;
+  top: 0; right: 0;
+  width: 0; height: 0;
+  border-style: solid;
+  border-width: 0 10px 10px 0;
+  border-color: transparent var(--border) transparent transparent;
+}
+
+/* ════════════════════════════════════════
+   RESPONSIVE
+════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .lobby { padding: 0 16px; }
+  .lobby-main { grid-template-columns: 1fr; }
+  .panel-right { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .matrix-head, .p-row {
+    grid-template-columns: 44px 1fr 90px 100px;
+  }
+  .p-diff-cell, .matrix-head-cell:nth-child(3) { display: none; }
+}
+@media (max-width: 600px) {
+  .header-title { font-size: 11px; }
+  .timer-display { font-size: 26px; }
+  .panel-right { grid-template-columns: 1fr; }
+  .lobby-hud { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
+</style>
+</head>
+
+<body>
+<div class="cursor" id="cursor"></div>
+<div class="scanline"></div>
+<div class="pixel-grid"></div>
+
+<!-- NAV (copied from base.html so players can navigate) -->
+<nav>
+  <div class="nav-left">
+    {% if user.is_authenticated %}
+      <div class="nav-username-left">{{ user.username }}</div>
+    {% endif %}
+  </div>
+
+  <div class="nav-right">
+    <a href="{% url 'dashboard' %}"><button class="nav-cta">Dashboard</button></a>
+  </div>
+</nav>
+
+<div class="lobby">
+
+  <!-- ══════════════════════════════════════
+       HEADER
+  ══════════════════════════════════════ -->
+  <header class="lobby-header">
+    <div class="header-left">
+
+      <div class="header-eyebrow">OBSIDIAN ARENA &nbsp;·&nbsp; Season III</div>
+
+      <h1 class="header-title">
+        {{ contest.name|default:"NETHER FORGE" }} &nbsp;<span></span>
+      </h1>
+
+      <p class="header-desc">
+        {{ contest.description|default:"No description available." }}
+      </p>
+
+      <div class="header-badges">
+        {% for tag in tags %}
+          <span class="badge badge-cyan">{{ tag|upper }}</span>
+        {% empty %}
+          <span class="badge badge-gray">[GENERAL]</span>
+        {% endfor %}
+      </div>
+
+    </div>
+
+    <div class="header-status">
+      <span class="status-label">Contest Status</span>
+      <span class="status-pill status-live">● LIVE</span>
+      <!-- contest end timer removed per request -->
+    </div>
+  </header>
+
+
+  <!-- ══════════════════════════════════════
+       MAIN SPLIT
+  ══════════════════════════════════════ -->
+  <div class="lobby-main">
+
+    <!-- ──────────────────────────────────
+         LEFT — PROBLEM MATRIX
+    ────────────────────────────────── -->
+    <div class="panel-left">
+
+      <div class="panel-heading">// PROBLEM_MATRIX</div>
+
+      <div class="problem-matrix">
+
+        <!-- Table head -->
+        <div class="matrix-head">
+          <span class="matrix-head-cell">ID</span>
+          <span class="matrix-head-cell">Challenge</span>
+          <span class="matrix-head-cell p-diff-cell">Diff</span>
+          <span class="matrix-head-cell center">Status</span>
+          <span class="matrix-head-cell right">Action</span>
+        </div>
+
+        <!-- Table body -->
+          <div class="matrix-body" id="problemBody">
+            {% if problems %}
+              {% for cp in problems %}
+                {% with p=cp.problem %}
+                <div class="p-row {% if p.id in solved_problems %}solved{% elif cp.points == 0 %}locked{% endif %}">
+                  <span class="p-id">#{{ forloop.counter|stringformat:"03d" }}</span>
+                  <span class="p-name">{{ p.title }}</span>
+                  <div class="p-diff-cell">
+                    <div class="p-diff {% if cp.points <= 10 %}diff-easy{% else %}{% if cp.points <= 30 %}diff-medium{% else %}diff-hard{% endif %}{% endif %}">
+                      <span class="diff-pip"></span>
+                      <span class="diff-label">{% if cp.points <= 10 %}EASY{% else %}{% if cp.points <= 30 %}MED{% else %}HARD{% endif %}{% endif %}</span>
+                    </div>
+                  </div>
+                  <div class="p-status"><span class="status-tag {% if p.id in solved_problems %}tag-solved{% else %}tag-unattempted{% endif %}">{% if p.id in solved_problems %}SOLVED{% else %}UNATTEMPTED{% endif %}</span></div>
+                  <div class="p-action">
+                    {% if p.id in solved_problems %}
+                      <a href="{% url 'problem_ide' contest.id p.id %}" class="btn-initiate">REVIEW_</a>
+                    {% else %}
+                      <a href="{% url 'problem_ide' contest.id p.id %}" class="btn-initiate">INITIATE_</a>
+                    {% endif %}
+                  </div>
+                </div>
+                {% endwith %}
+              {% endfor %}
+            {% else %}
+              <div style="padding:18px;color:var(--text-mid);">No problems in this contest.</div>
+            {% endif %}
+
+        </div><!-- /matrix-body -->
+      </div><!-- /problem-matrix -->
+    </div><!-- /panel-left -->
+
+
+    <!-- ──────────────────────────────────
+         RIGHT — TELEMETRY
+    ────────────────────────────────── -->
+    <div class="panel-right" id="telemetryPanel">
+    <!-- Add class="blackout" to panel-right to trigger blackout mode -->
+
+      <!-- Timer -->
+      <div class="telem-card">
+        <div class="corner-tr"></div>
+        <div class="telem-label">// TIME_REMAINING</div>
+        <div class="timer-display" id="timerDisplay">02:14:55</div>
+        <div class="timer-sub">HH : MM : SS</div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="telem-card">
+        <div class="corner-tr"></div>
+        <div class="telem-label">// TOP_5_NODES</div>
+
+        <div class="leaderboard-list">
+          {% if leaderboard %}
+            {% for entry in leaderboard %}
+              <div class="lb-row">
+                <span class="lb-rank {% if forloop.first %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">#{{ forloop.counter }}</span>
+                <span class="lb-name">{{ entry.username }}</span>
+                <span class="lb-solved">{{ entry.solved }}/{{ total_problems }}</span>
+                <span class="lb-pts">{{ entry.time_taken_str }}</span>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div style="padding:10px;color:var(--text-mid)">No leaderboard data yet.</div>
+          {% endif %}
+        </div>
+
+        <!-- Blackout overlay (shown when .blackout is on panel-right) -->
+        <div class="blackout-block">
+          <span class="blackout-icon">⚠</span>
+          <p class="blackout-msg">[!!] PROTOCOL:<br>RANKS ENCRYPTED<br>FOR FINAL<br>10 MINUTES.</p>
+        </div>
+      </div>
+
+      <!-- My Team (commented out for solo contests; keep for future team mode) -->
+      <!--
+      <div class="telem-card">
+        ...existing team markup...
+      </div>
+      -->
+
+    </div><!-- /panel-right -->
+  </div><!-- /lobby-main -->
+
+
+  <!-- ══════════════════════════════════════
+       BOTTOM PROGRESS HUD
+  ══════════════════════════════════════ -->
+  <div class="lobby-hud">
+
+    <span class="hud-label">
+      ARENA_PROGRESS: <span id="hudFraction">3/10</span> SECURED
+    </span>
+
+    <div class="hud-bar" id="hudBar">
+      <!-- Blocks generated by JS based on solved/total -->
+    </div>
+
+    <div class="hud-right">
+      <div class="hud-score-box">
+        SCORE &nbsp;<strong id="hudScore">780</strong>&nbsp; PTS
+      </div>
+      <div class="v-divider" style="height:18px;"></div>
+      <div class="hud-score-box">
+        RANK &nbsp;<strong style="color:var(--purple);">#12</strong>
+      </div>
+    </div>
+
+  </div><!-- /lobby-hud -->
+
+</div><!-- /lobby -->
+
+
+<script>
+(function () {
+  "use strict";
+
+  // contest end unix timestamp from Django context
+  const END_UNIX_TS = {{ contest_end_unix|default:0 }}; // seconds
+  const blackoutActive = {{ blackout_active|yesno:"true,false" }};
+
+  const headerTimer = document.getElementById('contest-timer');
+  const telemetryTimer = document.getElementById('timerDisplay');
+  const telemetry = document.getElementById('telemetryPanel');
+
+  function fmtTime(secs) {
+    if (secs <= 0) return 'ENDED';
+    const d  = Math.floor(secs / 86400);
+    const h  = Math.floor((secs % 86400) / 3600);
+    const m  = Math.floor((secs % 3600) / 60);
+    const s  = secs % 60;
+    const pad = n => String(n).padStart(2, '0');
+    return d > 0 ? `${d}D ${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(h)}:${pad(m)}:${pad(s)}`;
+  }
+
+  function tick() {
+    const now = Math.floor(Date.now() / 1000);
+    let remaining = Math.max(0, END_UNIX_TS - now);
+
+    // update both the header and telemetry timers
+    if (headerTimer) headerTimer.textContent = fmtTime(remaining);
+    if (telemetryTimer) {
+      if (remaining <= 0) telemetryTimer.textContent = 'ENDED';
+      else {
+        const h = Math.floor(remaining / 3600);
+        const m = Math.floor((remaining % 3600) / 60);
+        const s = remaining % 60;
+        const pad = n => String(n).padStart(2, '0');
+        telemetryTimer.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+      }
+    }
+
+    if (remaining <= 0) {
+      if (headerTimer) headerTimer.classList.add('warning');
+      if (telemetryTimer) telemetryTimer.classList.add('warning');
+      if (telemetry) telemetry.classList.add('blackout');
+    } else if (remaining <= 600) {
+      if (headerTimer) headerTimer.classList.add('warning');
+      if (telemetryTimer) telemetryTimer.classList.add('warning');
+      if (telemetry) telemetry.classList.add('blackout');
+    }
+
+    // schedule next tick
+    setTimeout(tick, 1000);
+  }
+
+  // initialize UI state based on server-provided blackout flag
+  if (blackoutActive && telemetry) {
+    telemetry.classList.add('blackout');
+    if (timerEl) timerEl.classList.add('warning');
+  }
+
+  // start ticking
+  tick();
+
+})();
+</script>
+</script>
+
+<script src="{% static 'home/js/cursor.js' %}"></script>
+
+</body>
+</html>

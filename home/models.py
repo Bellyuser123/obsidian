@@ -30,7 +30,7 @@ class Contest(models.Model):
     description = models.TextField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
-    passkey = models.CharField(max_length=50)
+    passkey = models.CharField(max_length=50, blank=True, null=True)
     tags = models.CharField(max_length=200, blank=True, help_text="Comma-separated tags (e.g. AI, WEB, DSA)")
     prize = models.CharField(max_length=100, blank=True, help_text="Prize pool info")
 
@@ -64,3 +64,28 @@ class TestCase(models.Model):
 
     def __str__(self):
         return f"Case for {self.problem.title}"
+
+
+class Submission(models.Model):
+    """Minimal submission model to store accepted solutions for leaderboard.
+
+    - user: the Django User who submitted
+    - contest: the contest this submission belongs to
+    - problem: the problem solved
+    - is_accepted: whether submission was judged accepted
+    - time_submitted: timestamp of submission (used for tie-breaker)
+    """
+    from django.contrib.auth.models import User as DjangoUser
+
+    user = models.ForeignKey(DjangoUser, on_delete=models.CASCADE, related_name='submissions')
+    contest = models.ForeignKey(Contest, on_delete=models.CASCADE, related_name='submissions')
+    problem = models.ForeignKey(Problem, on_delete=models.CASCADE, related_name='submissions')
+    is_accepted = models.BooleanField(default=False)
+    time_submitted = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        # prevent duplicate accepted submissions for same user/problem
+        unique_together = ('user', 'contest', 'problem')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.problem.title} @ {self.time_submitted} ({'AC' if self.is_accepted else 'WA'})"

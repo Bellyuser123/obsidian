@@ -544,7 +544,7 @@ nav { display: none !important; }
             </div>
           </div>
 
-          <a href="#" class="dg-connect-btn">Enter Arena_</a>
+          <a href="#" class="dg-connect-btn enter-arena" data-contest-id="{{ contest.id }}" data-has-passkey="{% if contest.passkey %}1{% else %}0{% endif %}">Enter Arena_</a>
         </div>
         {% empty %}
         <div class="empty-data">NO LIVE PROTOCOLS DETECTED.</div>
@@ -583,7 +583,7 @@ nav { display: none !important; }
             </div>
           </div>
 
-          <a href="#" class="dg-connect-btn">Enter Arena_</a>
+          <a href="#" class="dg-connect-btn enter-arena" data-contest-id="{{ contest.id }}" data-has-passkey="{% if contest.passkey %}1{% else %}0{% endif %}">Enter Arena_</a>
         </div>
         {% empty %}
         <div class="empty-data">NO SCHEDULED SYNCS FOUND.</div>
@@ -735,5 +735,110 @@ function fmtTime(secs) {
     });
   }, 1000);
 })();
+
+/* ═══════════════════════════════════════════
+   ENTER ARENA · PASSKEY FLOW
+   - Shows a small modal when contest requires passkey
+   - Posts to /contest/<id>/enter/ and redirects to lobby on success
+═══════════════════════════════════════════ */
+
+function getCsrfToken() {
+  const el = document.querySelector('input[name=csrfmiddlewaretoken]');
+  if (el) return el.value;
+  // fallback: read cookie (Django default)
+  const match = document.cookie.match(/csrftoken=([^;]+)/);
+  return match ? match[1] : '';
+}
+
+function showPasskeyModal(contestId, onSubmit) {
+  let modal = document.getElementById('passkey-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  const input = modal.querySelector('input[name="passkey"]');
+  const err = modal.querySelector('.passkey-error');
+  input.value = '';
+  err.textContent = '';
+  input.focus();
+
+  function cleanup() {
+    modal.style.display = 'none';
+    modal.querySelector('.passkey-submit').removeEventListener('click', submitHandler);
+    modal.querySelector('.passkey-cancel').removeEventListener('click', cancelHandler);
+  }
+
+  function submitHandler(e) {
+    e.preventDefault();
+    const key = input.value || '';
+    onSubmit(key, (errMsg) => {
+      if (errMsg) {
+        err.textContent = errMsg;
+      } else {
+        cleanup();
+      }
+    });
+  }
+
+  function cancelHandler(e) {
+    e.preventDefault();
+    cleanup();
+  }
+
+  modal.querySelector('.passkey-submit').addEventListener('click', submitHandler);
+  modal.querySelector('.passkey-cancel').addEventListener('click', cancelHandler);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.enter-arena').forEach(btn => {
+    btn.addEventListener('click', async (ev) => {
+      ev.preventDefault();
+      const contestId = btn.dataset.contestId;
+      const hasPass = btn.dataset.hasPasskey === '1';
+
+      const postEnter = async (passkey) => {
+        const form = new FormData();
+        if (passkey) form.append('passkey', passkey);
+        const resp = await fetch(`/contest/${contestId}/enter/`, {
+          method: 'POST',
+          headers: { 'X-CSRFToken': getCsrfToken() },
+          body: form,
+          credentials: 'same-origin'
+        });
+        const data = await resp.json().catch(() => ({ ok: false, error: 'Server error' }));
+        if (resp.ok && data.ok) {
+          window.location.href = data.redirect;
+        } else {
+          return data.error || 'Failed to enter contest';
+        }
+      };
+
+      if (hasPass) {
+        showPasskeyModal(contestId, async (entered, cb) => {
+          const err = await postEnter(entered);
+          cb(err);
+        });
+      } else {
+        const err = await postEnter('');
+        if (err) alert(err);
+      }
+    });
+  });
+});
+
+/* Passkey modal DOM (hidden by default) */
+const modalHtml = `
+<div id="passkey-modal" style="display:none;position:fixed;inset:0;align-items:center;justify-content:center;background:rgba(0,0,0,0.45);z-index:2000;"> 
+  <div style="background:#0a0a0f;border:1px solid #2a2a48;padding:18px;min-width:320px;max-width:420px;clip-path:polygon(6px 0%,calc(100% - 6px) 0%,100% 6px,100% calc(100% - 6px),calc(100% - 6px) 100%,6px 100%,0% calc(100% - 6px),0% 6px);"> 
+    <div style="font-family: 'Press Start 2P', monospace;color:#00ffe5;font-size:11px;margin-bottom:8px;">ENTER ARENA — PASSKEY</div>
+    <div style="font-family:'JetBrains Mono',monospace;color:#cfcfe0;font-size:13px;margin-bottom:12px;">Provide the contest passkey to continue.</div>
+    <input name="passkey" type="password" style="width:100%;padding:8px;border:1px solid #2a2a48;background:#0f0f18;color:#fff;margin-bottom:8px;" />
+    <div class="passkey-error" style="color:#ff6b6b;font-family:var(--mn);font-size:12px;height:18px;margin-bottom:8px;"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;"> 
+      <button class="passkey-cancel" style="background:transparent;border:1px solid #444;color:#cfcfe0;padding:8px 12px;">Cancel</button>
+      <button class="passkey-submit" style="background:#00ffe5;border:none;color:#000;padding:8px 12px;">Enter</button>
+    </div>
+  </div>
+</div>`;
+
+document.body.insertAdjacentHTML('beforeend', modalHtml);
 </script>
 {% endblock %}
