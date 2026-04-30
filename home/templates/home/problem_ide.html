@@ -1457,14 +1457,38 @@ function setEditorValue(text) {
   if (fallbackEditor) fallbackEditor.value = text;
 }
 
+// Parse the injected JSON
+let dbStubs = {};
+try {
+  const dbStubsRaw = `{{ code_stubs_json|escapejs }}`;
+  if (dbStubsRaw && dbStubsRaw !== '{}') {
+    dbStubs = JSON.parse(dbStubsRaw);
+  }
+} catch(e) {
+  console.error("Failed to parse DB code stubs", e);
+}
+
 function loadStub() {
-  setEditorValue('# Write your code here\n');
+  const slug = (langSel.value || '').toLowerCase();
+  
+  if (dbStubs[slug]) {
+    setEditorValue(dbStubs[slug]);
+  } else {
+    // Default to comment
+    const mode = selectedAceMode();
+    let defaultComment = '// Write your code here\n';
+    if (mode === 'python' || mode === 'ruby') {
+      defaultComment = '# Write your code here\n';
+    }
+    setEditorValue(defaultComment);
+  }
+  
   applyAceMode();
 }
 
-langSel.addEventListener('change', () => loadStub(langSel.value));
+langSel.addEventListener('change', loadStub);
 if (langSel.options.length > 0) {
-  loadStub(langSel.value);
+  loadStub();
 }
 
 
@@ -1473,7 +1497,7 @@ if (langSel.options.length > 0) {
 ══════════════════════════════════════════ */
 function resetCode() {
   if (confirm('Reset code to default stub?')) {
-    loadStub(langSel.value);
+    loadStub();
   }
 }
 window.resetCode = resetCode;

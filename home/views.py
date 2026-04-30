@@ -256,6 +256,13 @@ def problem_ide_view(request, contest_id, problem_id):
         allowed_languages_qs = Language.objects.all().order_by('name')
     allowed_languages = list(allowed_languages_qs)
 
+    import json
+    stubs_dict = {}
+    for stub in problem.stubs.select_related('language'):
+        stubs_dict[stub.language.slug] = stub.starter_code
+    
+    code_stubs_json = json.dumps(stubs_dict)
+
     context = {
         'contest': contest,
         'problem': problem,
@@ -266,5 +273,6 @@ def problem_ide_view(request, contest_id, problem_id):
         'constraint_lines': constraint_lines,
         'sample_cases': sample_cases,
         'allowed_languages': allowed_languages,
+        'code_stubs_json': code_stubs_json,
     }
     return render(request, 'home/problem_ide.html', context)

@@ -40,6 +40,18 @@ class Problem(models.Model):
         return self.title
 
 
+class CodeStub(models.Model):
+    problem = models.ForeignKey(Problem, on_delete=models.CASCADE, related_name='stubs')
+    language = models.ForeignKey(Language, on_delete=models.CASCADE)
+    starter_code = models.TextField(blank=True, default="", help_text="Starter template boilerplate")
+
+    class Meta:
+        unique_together = ('problem', 'language')
+
+    def __str__(self):
+        return f"Stub for {self.problem.title} in {self.language.name}"
+
+
 class ProblemRule(models.Model):
     """The 'Custom Checker' logic for mandatory/forbidden constructs."""
     RULE_TYPES = [

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     Profile, Language, Problem, ProblemRule, Contest, 
-    ContestProblem, TestCase, UserProblemSession, Submission
+    ContestProblem, TestCase, UserProblemSession, Submission, CodeStub
 )
 
 class ProfileAdmin(admin.ModelAdmin):
@@ -34,11 +34,16 @@ class ProblemRuleInline(admin.TabularInline):
     extra = 1
 
 
+class CodeStubInline(admin.TabularInline):
+    model = CodeStub
+    extra = 1
+
+
 class ProblemAdmin(admin.ModelAdmin):
     list_display = ('title', 'is_special_judge', 'get_contests')
     search_fields = ('title', 'statement')
     list_filter = ('is_special_judge', 'allowed_languages')
-    inlines = [TestCaseInline, ProblemRuleInline]
+    inlines = [CodeStubInline, TestCaseInline, ProblemRuleInline]
     filter_horizontal = ('allowed_languages',)
 
     fieldsets = (
