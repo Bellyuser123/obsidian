@@ -9,46 +9,27 @@
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/db.sqlite3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/home/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/home/admin.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/home/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/home/models.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/home/templates/home/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/home/templates/home/base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/db.sqlite3" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/admin.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/apps.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/0001_initial.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/0002_problem_contest_testcase.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/0003_remove_contest_is_active_remove_contest_problems_and_more.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/0004_contest_problems.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/0005_alter_contest_problems.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/models.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/static/home/css/style.css" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/static/home/js/cursor.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/static/home/js/matrix.js" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/base.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/home.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/profile.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/register.html" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/tests.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/urls.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/views.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/manage.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/obsidian_proj/__init__.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/obsidian_proj/asgi.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/obsidian_proj/settings.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/obsidian_proj/urls.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/obsidian_proj/wsgi.py" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/obsidian_proj/settings.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/home/templates/home/contest_lobby.html" beforeDir="false" afterPath="$PROJECT_DIR$/home/templates/home/contest_lobby.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/home/templates/home/problem_ide.html" beforeDir="false" afterPath="$PROJECT_DIR$/home/templates/home/problem_ide.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/home/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/home/views.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
+  <component name="EmbeddingIndexingInfo">
+    <option name="cachedIndexableFilesCount" value="49" />
+  </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
         <option value="Python Script" />
         <option value="HTML File" />
+        <option value="JavaScript File" />
       </list>
     </option>
   </component>
@@ -56,29 +37,52 @@
     <option name="PUSH_AUTO_UPDATE" value="true" />
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="GitHubPullRequestSearchHistory">{
+  &quot;lastFilter&quot;: {
+    &quot;state&quot;: &quot;OPEN&quot;,
+    &quot;assignee&quot;: &quot;Bellyuser123&quot;
+  }
+}</component>
+  <component name="GithubPullRequestsUISettings">{
+  &quot;selectedUrlAndAccountId&quot;: {
+    &quot;url&quot;: &quot;https://github.com/Bellyuser123/obsidian.git&quot;,
+    &quot;accountId&quot;: &quot;c724ad9d-1285-4941-8019-2a4f54ce3465&quot;
+  }
+}</component>
   <component name="McpProjectServerCommands">
     <commands />
     <urls />
   </component>
   <component name="ProjectColorInfo">{
-  &quot;associatedIndex&quot;: 6
+  &quot;associatedIndex&quot;: 4,
+  &quot;fromUser&quot;: true
 }</component>
   <component name="ProjectId" id="3AoYpfbmlWUq8rwhGxpzKO4W0uN" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "DefaultHtmlFileTemplate": "HTML File",
-    "Python.manage.executor": "Run",
-    "Python.urls.executor": "Run",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "recovered-work",
-    "last_opened_file_path": "C:/Users/MSI/PycharmProjects/obsidian",
-    "node.js.selected.package.tslint": "(autodetect)"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;DefaultHtmlFileTemplate&quot;: &quot;HTML File&quot;,
+    &quot;Python.manage.executor&quot;: &quot;Run&quot;,
+    &quot;Python.urls.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/MSI/PycharmProjects/obsidian&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;trusted.hosts&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\MSI\PycharmProjects\obsidian" />
@@ -91,7 +95,7 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-python-sdk-0509580d9d50-746f403e7f0c-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-241.14494.241" />
+        <option value="bundled-python-sdk-b63d5a1f7c97-b61e75351b1f-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-261.22158.340" />
       </set>
     </attachedChunks>
   </component>
@@ -103,6 +107,9 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1773260574372</updated>
+      <workItem from="1777564868789" duration="70000" />
+      <workItem from="1777567342533" duration="2786000" />
+      <workItem from="1777570164953" duration="629000" />
     </task>
     <task id="LOCAL-00001" summary="git push https://github.com/Bellyuser123/obsidian.git">
       <option name="closed" value="true" />
@@ -138,6 +145,9 @@
     </task>
     <option name="localTasksCounter" value="5" />
     <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
     <option name="TAB_STATES">

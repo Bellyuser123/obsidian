@@ -1,14 +1,7 @@
-{% load static %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NETHER FORGE 2025 — Obsidian Arena</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+{% extends "home/base.html" %}
+{% block title %}{{ contest.name|default:"Contest" }} — Obsidian Arena{% endblock %}
 
+{% block extra_css %}
 <style>
 /* ═══════════════════════════════════════════════════════════════
    OBSIDIAN — CONTEST LOBBY
@@ -88,7 +81,7 @@ body { cursor: none; }
   -webkit-mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 20%, transparent 85%);
 }
 
-#matrixCanvas { position: fixed; inset: 0; opacity: 0.06; pointer-events: none; z-index: 1; }
+#matrixCanvas { display: none !important; }
 
 /* ════════════════════════════════════════
    SCROLLBAR
@@ -100,6 +93,14 @@ body { cursor: none; }
 
 /* NAV BAR (scoped for lobby) */
 nav {
+  position: relative;
+  top: auto;
+  width: auto;
+  height: auto;
+  z-index: 2;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -737,12 +738,13 @@ nav {
   .lobby-hud { flex-direction: column; align-items: flex-start; gap: 10px; }
 }
 </style>
-</head>
+{% endblock %}
 
-<body>
-<div class="cursor" id="cursor"></div>
-<div class="scanline"></div>
-<div class="pixel-grid"></div>
+{% block page_nav %}{% endblock %}
+{% block page_footer %}{% endblock %}
+{% block matrix_js %}{% endblock %}
+
+{% block content %}
 
 <!-- NAV (copied from base.html so players can navigate) -->
 <nav>
@@ -825,9 +827,9 @@ nav {
                   <span class="p-id">#{{ forloop.counter|stringformat:"03d" }}</span>
                   <span class="p-name">{{ p.title }}</span>
                   <div class="p-diff-cell">
-                    <div class="p-diff {% if cp.points <= 10 %}diff-easy{% else %}{% if cp.points <= 30 %}diff-medium{% else %}diff-hard{% endif %}{% endif %}">
+                    <div class="p-diff {% if cp.difficulty == 'HARD' %}diff-hard{% elif cp.difficulty == 'MEDIUM' %}diff-medium{% else %}diff-easy{% endif %}">
                       <span class="diff-pip"></span>
-                      <span class="diff-label">{% if cp.points <= 10 %}EASY{% else %}{% if cp.points <= 30 %}MED{% else %}HARD{% endif %}{% endif %}</span>
+                      <span class="diff-label">{% if cp.difficulty == 'MEDIUM' %}MED{% else %}{{ cp.difficulty|default:"EASY" }}{% endif %}</span>
                     </div>
                   </div>
                   <div class="p-status"><span class="status-tag {% if p.id in solved_problems %}tag-solved{% else %}tag-unattempted{% endif %}">{% if p.id in solved_problems %}SOLVED{% else %}UNATTEMPTED{% endif %}</span></div>
@@ -928,8 +930,9 @@ nav {
   </div><!-- /lobby-hud -->
 
 </div><!-- /lobby -->
+{% endblock %}
 
-
+{% block extra_js %}
 <script>
 (function () {
   "use strict";
@@ -986,7 +989,7 @@ nav {
   // initialize UI state based on server-provided blackout flag
   if (blackoutActive && telemetry) {
     telemetry.classList.add('blackout');
-    if (timerEl) timerEl.classList.add('warning');
+    if (telemetryTimer) telemetryTimer.classList.add('warning');
   }
 
   // start ticking
@@ -994,9 +997,4 @@ nav {
 
 })();
 </script>
-</script>
-
-<script src="{% static 'home/js/cursor.js' %}"></script>
-
-</body>
-</html>
+{% endblock %}

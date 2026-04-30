@@ -1,13 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ARRAY_REVERSAL_V3 — Obsidian IDE</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+{% extends "home/base.html" %}
+{% block title %}{{ problem.title|default:"Problem" }} — Obsidian IDE{% endblock %}
 
+{% block extra_css %}
 <style>
 /* ═══════════════════════════════════════════════════════════
    OBSIDIAN — PROBLEM IDE
@@ -82,6 +76,20 @@ body {
   overflow: hidden; /* page itself doesn't scroll */
 }
 
+main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Keep IDE background as its original flat style (no matrix rain/grid overlays). */
+.scanline,
+.pixel-grid,
+#matrixCanvas {
+  display: none !important;
+}
+
 /* ── Global scrollbar ── */
 * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 ::-webkit-scrollbar { width: 4px; height: 4px; }
@@ -136,7 +144,7 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.header-title .accent { color: var(--cyan); }
+.header-title .accent { color: #fff; }
 
 .header-spacer { flex: 1; }
 
@@ -160,6 +168,8 @@ body {
 .badge-pts    { color: var(--cyan);         border-color: var(--cyan-mid);              background: var(--cyan-dim); }
 .badge-diff   { color: var(--yellow);        border-color: rgba(240,192,64,0.35);       background: var(--yellow-dim); }
 .badge-status { color: var(--green);         border-color: rgba(45,255,138,0.35);       background: var(--green-dim); }
+.badge-status-upcoming { color: var(--yellow); border-color: rgba(240,192,64,0.35); background: var(--yellow-dim); }
+.badge-status-ended { color: var(--red); border-color: rgba(255,64,96,0.35); background: var(--red-dim); }
 
 .header-timer {
   font-family: var(--mn);
@@ -525,21 +535,37 @@ body {
 .code-editor {
   flex: 1;
   min-width: 0;
-  padding: 14px 16px;
+  padding: 0;
   background: transparent;
   border: none;
   color: var(--text-code);
   font-family: var(--mn);
   font-size: 13px;
   line-height: 1.65;
-  resize: none;
   outline: none;
+  overflow: hidden;
+}
+.code-editor::selection { background: rgba(123,47,255,0.3); }
+
+.code-editor-fallback {
+  display: none;
+  padding: 14px 16px;
+  resize: none;
   overflow-y: auto;
   tab-size: 4;
   white-space: pre;
   caret-color: var(--cyan);
 }
-.code-editor::selection { background: rgba(123,47,255,0.3); }
+
+#codeEditor .ace_gutter {
+  background: var(--surface-2);
+  color: var(--text-dim);
+  border-right: 1px solid var(--border-dim);
+}
+
+#codeEditor .ace_print-margin {
+  width: 0 !important;
+}
 
 /* Bottom utility bar */
 .exec-bottombar {
@@ -956,15 +982,19 @@ body {
   .exec-topbar, .exec-bottombar { padding: 0 10px; }
 }
 </style>
-</head>
+{% endblock %}
 
-<body>
+{% block page_nav %}{% endblock %}
+{% block page_footer %}{% endblock %}
+{% block matrix_js %}{% endblock %}
+
+{% block content %}
 
 <!-- ═════════════════════════════════════════
      PAGE HEADER
 ═════════════════════════════════════════ -->
 <header class="page-header">
-  <a class="header-back" href="#">
+  <a class="header-back" href="{% url 'contest_lobby' contest.id %}">
     <span class="arr">←</span>
     <span>ARENA</span>
   </a>
@@ -972,15 +1002,15 @@ body {
   <div class="header-divider"></div>
 
   <h1 class="header-title">
-    <span class="accent">ARRAY</span>_REVERSAL_V3
+    <span class="accent">{{ problem.title|upper }}</span>
   </h1>
 
   <div class="header-spacer"></div>
 
   <div class="header-meta">
-    <span class="meta-badge badge-diff">MEDIUM</span>
-    <span class="meta-badge badge-pts">150 PTS</span>
-    <span class="meta-badge badge-status">● LIVE</span>
+    <span class="meta-badge badge-diff">{% if contest_problem.difficulty == 'MEDIUM' %}MED{% else %}{{ contest_problem.difficulty|default:"EASY" }}{% endif %}</span>
+    <span class="meta-badge badge-pts">{{ contest_problem.points }} PTS</span>
+    <span class="meta-badge badge-status {% if contest_status == 'UPCOMING' %}badge-status-upcoming{% elif contest_status == 'ENDED' %}badge-status-ended{% endif %}">● {{ contest_status }}</span>
   </div>
 
   <div class="header-timer" id="pageTimer">02:14:55</div>
@@ -999,9 +1029,9 @@ body {
   </button>
   <div class="tab-spacer"></div>
   <div class="tab-bar-right">
-    <span>NETHER&nbsp;FORGE&nbsp;2025</span>
+    <span>{{ contest.name|upper }}</span>
     <div style="width:1px;height:14px;background:var(--border);"></div>
-    <span>#004</span>
+    <span>#{{ problem_number|stringformat:"03d" }}</span>
   </div>
 </div>
 
@@ -1019,6 +1049,78 @@ body {
     <!-- LEFT — BRIEFING -->
     <div class="briefing">
       <div class="briefing-scroll" id="briefingScroll">
+
+        <div class="briefing-section">
+          <div class="section-label">Problem Statement</div>
+          <div class="problem-text">
+            {{ problem.statement|default:"Problem statement not available."|linebreaksbr }}
+          </div>
+        </div>
+
+        <div class="briefing-section">
+          <div class="section-label">Input Format</div>
+          <div class="problem-text">
+            {{ problem.input_format|default:"Input format not provided."|linebreaksbr }}
+          </div>
+        </div>
+
+        <div class="briefing-section">
+          <div class="section-label">Constraints</div>
+          <ul class="constraint-list">
+            {% if constraint_lines %}
+              {% for constraint in constraint_lines %}
+                <li>{{ constraint }}</li>
+              {% endfor %}
+            {% else %}
+              <li>No constraints provided.</li>
+            {% endif %}
+          </ul>
+        </div>
+
+        <div class="briefing-section">
+          <div class="section-label">Output Format</div>
+          <div class="problem-text">
+            {{ problem.output_format|default:"Output format not provided."|linebreaksbr }}
+          </div>
+        </div>
+
+        <div class="briefing-section">
+          <div class="section-label">Sample Cases</div>
+          {% if sample_cases %}
+            {% for sample in sample_cases %}
+              <div class="sample-block">
+                <div class="sample-header">
+                  <span class="sample-id">// SAMPLE_{{ forloop.counter|stringformat:"02d" }}</span>
+                  <button class="sample-copy-btn" onclick="copyToEditor('{{ sample.input_data|default_if_none:''|escapejs }}', this)">USE INPUT_</button>
+                </div>
+                <div class="sample-io">
+                  <div class="sample-col">
+                    <div class="sample-col-label">Input</div>
+                    <pre class="sample-code">{{ sample.input_data|default_if_none:'' }}</pre>
+                  </div>
+                  <div class="sample-col">
+                    <div class="sample-col-label">Output</div>
+                    <pre class="sample-code">{{ sample.expected_output|default_if_none:'' }}</pre>
+                  </div>
+                </div>
+                <div class="sample-explanation">
+                  <div class="sample-explanation-label">Explanation</div>
+                  <p class="sample-explanation-text">
+                    {% if sample.explanation %}
+                      {{ sample.explanation|linebreaksbr }}
+                    {% else %}
+                      No explanation provided.
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="problem-text">No sample cases available for this problem.</p>
+          {% endif %}
+        </div>
+
+        {% if False %}
 
         <!-- Problem Statement -->
         <div class="briefing-section">
@@ -1123,6 +1225,7 @@ body {
             </div>
           </div>
         </div>
+        {% endif %}
 
       </div><!-- /briefing-scroll -->
     </div><!-- /briefing -->
@@ -1134,11 +1237,11 @@ body {
       <!-- Top utility bar -->
       <div class="exec-topbar">
         <select class="lang-select" id="langSelect">
-          <option value="py3">Python 3.12</option>
-          <option value="cpp20">C++ 20</option>
-          <option value="java">Java 21</option>
-          <option value="js">Node.js 20</option>
-          <option value="rust">Rust 1.75</option>
+          {% for lang in allowed_languages %}
+            <option value="{{ lang.slug }}" data-ace-mode="{{ lang.ace_mode }}">{{ lang.name }}</option>
+          {% empty %}
+            <option value="plain" data-ace-mode="text">Plain Text</option>
+          {% endfor %}
         </select>
 
         <div class="exec-topbar-spacer"></div>
@@ -1151,19 +1254,10 @@ body {
         </div>
       </div>
 
-      <!-- Code editor with line numbers -->
+      <!-- Code editor -->
       <div class="editor-area">
-        <div class="line-numbers" id="lineNumbers">
-          <!-- Generated by JS -->
-        </div>
-        <textarea
-          class="code-editor"
-          id="codeEditor"
-          spellcheck="false"
-          autocorrect="off"
-          autocapitalize="off"
-          placeholder="# Write your solution here..."
-        ></textarea>
+        <div class="code-editor" id="codeEditor"></div>
+        <textarea class="code-editor code-editor-fallback" id="codeEditorFallback" spellcheck="false" autocorrect="off" autocapitalize="off" placeholder="# Write your solution here..."></textarea>
       </div>
 
       <!-- Custom input area (conditionally shown) -->
@@ -1300,162 +1394,78 @@ body {
   </div><!-- /panel-submissions -->
 
 </div><!-- /content-area -->
+{% endblock %}
 
-
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.33.0/ace.js" referrerpolicy="no-referrer"></script>
 <script>
 (function () {
 "use strict";
 
 /* ══════════════════════════════════════════
-   DEFAULT CODE STUBS per language
-══════════════════════════════════════════ */
-const CODE_STUBS = {
-  py3: `import sys
-input = sys.stdin.readline
-
-def solve():
-    n = int(input())
-    a = list(map(int, input().split()))
-
-    # TODO: Reverse in-place, O(N) time, O(1) space
-    left, right = 0, n - 1
-    while left < right:
-        a[left], a[right] = a[right], a[left]
-        left  += 1
-        right -= 1
-
-    print(*a)
-
-solve()`,
-
-  cpp20: `#include <bits/stdc++.h>
-using namespace std;
-
-int main() {
-    ios::sync_with_stdio(false);
-    cin.tie(nullptr);
-
-    int n;
-    cin >> n;
-    vector<int> a(n);
-    for (auto& x : a) cin >> x;
-
-    // TODO: in-place reverse
-    reverse(a.begin(), a.end());
-
-    for (int i = 0; i < n; i++) {
-        cout << a[i];
-        if (i < n - 1) cout << ' ';
-    }
-    cout << '\\n';
-    return 0;
-}`,
-
-  java: `import java.util.*;
-import java.io.*;
-
-public class Solution {
-    public static void main(String[] args) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        int n = Integer.parseInt(br.readLine().trim());
-        StringTokenizer st = new StringTokenizer(br.readLine());
-        int[] a = new int[n];
-        for (int i = 0; i < n; i++)
-            a[i] = Integer.parseInt(st.nextToken());
-
-        // TODO: in-place reverse
-        for (int l = 0, r = n - 1; l < r; l++, r--) {
-            int tmp = a[l]; a[l] = a[r]; a[r] = tmp;
-        }
-
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < n; i++) {
-            if (i > 0) sb.append(' ');
-            sb.append(a[i]);
-        }
-        System.out.println(sb);
-    }
-}`,
-
-  js: `const lines = require('fs')
-  .readFileSync('/dev/stdin', 'utf8')
-  .trim().split('\\n');
-
-const n = parseInt(lines[0]);
-const a = lines[1].split(' ').map(Number);
-
-// TODO: in-place reverse
-let l = 0, r = n - 1;
-while (l < r) {
-    [a[l], a[r]] = [a[r], a[l]];
-    l++; r--;
-}
-
-console.log(a.join(' '));`,
-
-  rust: `use std::io::{self, BufRead, Write, BufWriter};
-
-fn main() {
-    let stdin  = io::stdin();
-    let stdout = io::stdout();
-    let mut out = BufWriter::new(stdout.lock());
-    let mut lines = stdin.lock().lines();
-
-    let n: usize = lines.next().unwrap().unwrap().trim().parse().unwrap();
-    let mut a: Vec<i64> = lines.next().unwrap().unwrap()
-        .split_whitespace()
-        .map(|x| x.parse().unwrap())
-        .collect();
-
-    // TODO: in-place reverse
-    a.reverse();
-
-    let res: Vec<String> = a.iter().map(|x| x.to_string()).collect();
-    writeln!(out, "{}", res.join(" ")).unwrap();
-}`
-};
-
-/* ══════════════════════════════════════════
    EDITOR — Line numbers + sync
 ══════════════════════════════════════════ */
-const editor    = document.getElementById('codeEditor');
-const lineNums  = document.getElementById('lineNumbers');
-const langSel   = document.getElementById('langSelect');
+const langSel = document.getElementById('langSelect');
+const fallbackEditor = document.getElementById('codeEditorFallback');
+const aceEditor = (window.ace && document.getElementById('codeEditor')) ? ace.edit('codeEditor') : null;
 
-function renderLineNumbers() {
-  const lines = editor.value.split('\n').length;
-  let html = '';
-  for (let i = 1; i <= lines; i++) {
-    html += `<span class="line-num">${i}</span>`;
-  }
-  lineNums.innerHTML = html;
+if (aceEditor) {
+  aceEditor.setTheme('ace/theme/monokai');
+  aceEditor.setOptions({
+    fontFamily: "'JetBrains Mono', monospace",
+    fontSize: "13px",
+    showPrintMargin: false,
+    tabSize: 4,
+    useSoftTabs: true,
+    wrap: false,
+  });
+} else if (fallbackEditor) {
+  const aceHost = document.getElementById('codeEditor');
+  if (aceHost) aceHost.style.display = 'none';
+  fallbackEditor.style.display = 'block';
+  fallbackEditor.addEventListener('keydown', function (e) {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const s = fallbackEditor.selectionStart;
+      const v = fallbackEditor.value;
+      fallbackEditor.value = v.substring(0, s) + '    ' + v.substring(fallbackEditor.selectionEnd);
+      fallbackEditor.selectionStart = fallbackEditor.selectionEnd = s + 4;
+    }
+  });
 }
 
-function syncScroll() {
-  lineNums.scrollTop = editor.scrollTop;
+function selectedAceMode() {
+  const selected = langSel.options[langSel.selectedIndex];
+  return selected ? (selected.dataset.aceMode || 'text').toLowerCase() : 'text';
 }
 
-editor.addEventListener('input',    renderLineNumbers);
-editor.addEventListener('scroll',   syncScroll);
-editor.addEventListener('keydown',  function (e) {
-  if (e.key === 'Tab') {
-    e.preventDefault();
-    const s = editor.selectionStart;
-    const v = editor.value;
-    editor.value = v.substring(0, s) + '    ' + v.substring(editor.selectionEnd);
-    editor.selectionStart = editor.selectionEnd = s + 4;
-    renderLineNumbers();
-  }
-});
+function applyAceMode() {
+  if (!aceEditor) return;
+  aceEditor.session.setMode(`ace/mode/${selectedAceMode()}`);
+}
 
-// Load default stub for selected language
-function loadStub(lang) {
-  editor.value = CODE_STUBS[lang] || '';
-  renderLineNumbers();
+function getEditorValue() {
+  if (aceEditor) return aceEditor.getValue();
+  return fallbackEditor ? fallbackEditor.value : '';
+}
+
+function setEditorValue(text) {
+  if (aceEditor) {
+    aceEditor.setValue(text, -1);
+    return;
+  }
+  if (fallbackEditor) fallbackEditor.value = text;
+}
+
+function loadStub() {
+  setEditorValue('# Write your code here\n');
+  applyAceMode();
 }
 
 langSel.addEventListener('change', () => loadStub(langSel.value));
-loadStub(langSel.value); // on page load
+if (langSel.options.length > 0) {
+  loadStub(langSel.value);
+}
 
 
 /* ══════════════════════════════════════════
@@ -1576,7 +1586,7 @@ function showResultTerminal(rows, type) {
 }
 
 function runCode() {
-  if (!editor.value.trim()) return;
+  if (!getEditorValue().trim()) return;
   showOverlay('EXECUTING...');
   setTimeout(() => {
     hideOverlay();
@@ -1584,7 +1594,7 @@ function runCode() {
   }, 1200);
 }
 function submitCode() {
-  if (!editor.value.trim()) return;
+  if (!getEditorValue().trim()) return;
   showOverlay('JUDGING...');
   setTimeout(() => {
     hideOverlay();
@@ -1625,7 +1635,7 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 (function () {
   const el = document.getElementById('pageTimer');
   if (!el) return;
-  const END_UNIX = 0; // set from Django: {{ contest_end_unix }}
+  const END_UNIX = {{ contest_end_unix|default:0 }};
   if (!END_UNIX) return;
 
   const pad = n => String(n).padStart(2, '0');
@@ -1643,5 +1653,4 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 })();
 </script>
-</body>
-</html>
+{% endblock %}

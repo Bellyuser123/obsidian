@@ -6,7 +6,7 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from .models import Contest, ContestProblem
+from .models import Contest, ContestProblem, Language
 from .models import Submission
 from django.db.utils import OperationalError
 from django.http import JsonResponse
@@ -225,9 +225,46 @@ def problem_ide_view(request, contest_id, problem_id):
     # try to load the problem object via ContestProblem relation
     cp = get_object_or_404(ContestProblem, contest=contest, problem__id=problem_id)
     problem = cp.problem
+    now = timezone.now()
+
+    if now < contest.start_time:
+        contest_status = 'UPCOMING'
+    elif now > contest.end_time:
+        contest_status = 'ENDED'
+    else:
+        contest_status = 'LIVE'
+
+    contest_problem_ids = list(
+        ContestProblem.objects.filter(contest=contest)
+        .order_by('id')
+        .values_list('problem_id', flat=True)
+    )
+    try:
+        problem_number = contest_problem_ids.index(problem.id) + 1
+    except ValueError:
+        problem_number = 1
+
+    raw_constraints = problem.constraints or ''
+    constraint_lines = [line.strip() for line in raw_constraints.splitlines() if line.strip()]
+    if len(constraint_lines) <= 1 and ';' in raw_constraints:
+        constraint_lines = [line.strip() for line in raw_constraints.split(';') if line.strip()]
+
+    sample_cases = problem.testcases.filter(is_sample=True).order_by('id')
+
+    allowed_languages_qs = problem.allowed_languages.all().order_by('name')
+    if not allowed_languages_qs.exists():
+        allowed_languages_qs = Language.objects.all().order_by('name')
+    allowed_languages = list(allowed_languages_qs)
+
     context = {
         'contest': contest,
         'problem': problem,
         'contest_problem': cp,
+        'contest_status': contest_status,
+        'contest_end_unix': int(contest.end_time.timestamp()),
+        'problem_number': problem_number,
+        'constraint_lines': constraint_lines,
+        'sample_cases': sample_cases,
+        'allowed_languages': allowed_languages,
     }
     return render(request, 'home/problem_ide.html', context)
