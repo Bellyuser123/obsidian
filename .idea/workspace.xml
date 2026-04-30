@@ -5,15 +5,39 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="733b11db-28e7-4c29-ab0f-4530ab9ce5d0" name="Changes" comment="git push https://github.com/Bellyuser123/obsidian.git">
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/obsidian_proj/db.sqlite3" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/admin.py" beforeDir="false" afterPath="$PROJECT_DIR$/obsidian_proj/home/admin.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/obsidian_proj/home/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/static/home/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/obsidian_proj/home/static/home/css/style.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/obsidian_proj/home/templates/home/base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/home.html" beforeDir="false" afterPath="$PROJECT_DIR$/obsidian_proj/home/templates/home/home.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/register.html" beforeDir="false" afterPath="$PROJECT_DIR$/obsidian_proj/home/templates/home/register.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/obsidian_proj/home/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/db.sqlite3" beforeDir="false" afterPath="$PROJECT_DIR$/db.sqlite3" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/home/templates/home/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/home/templates/home/base.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/db.sqlite3" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/admin.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/apps.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/0001_initial.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/0002_problem_contest_testcase.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/0003_remove_contest_is_active_remove_contest_problems_and_more.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/0004_contest_problems.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/0005_alter_contest_problems.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/migrations/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/models.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/static/home/css/style.css" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/static/home/js/cursor.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/static/home/js/matrix.js" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/base.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/home.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/profile.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/templates/home/register.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/tests.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/urls.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/home/views.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/manage.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/obsidian_proj/__init__.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/obsidian_proj/asgi.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/obsidian_proj/settings.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/obsidian_proj/urls.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/obsidian_proj/wsgi.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/obsidian_proj/settings.py" beforeDir="false" afterPath="$PROJECT_DIR$/obsidian_proj/settings.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,11 +56,14 @@
     <option name="PUSH_AUTO_UPDATE" value="true" />
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="McpProjectServerCommands">
+    <commands />
+    <urls />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 6
 }</component>
   <component name="ProjectId" id="3AoYpfbmlWUq8rwhGxpzKO4W0uN" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -47,12 +74,14 @@
     "Python.manage.executor": "Run",
     "Python.urls.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
-    "git-widget-placeholder": "master",
-    "last_opened_file_path": "C:/Users/MSI/PycharmProjects/obsidian/obsidian_proj/home/template"
+    "git-widget-placeholder": "recovered-work",
+    "last_opened_file_path": "C:/Users/MSI/PycharmProjects/obsidian",
+    "node.js.selected.package.tslint": "(autodetect)"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="C:\Users\MSI\PycharmProjects\obsidian" />
       <recent name="C:\Users\MSI\PycharmProjects\obsidian\obsidian_proj\home\template" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
