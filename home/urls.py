@@ -10,4 +10,6 @@ urlpatterns = [
     path('contest/<int:contest_id>/enter/', views.enter_contest, name='enter_contest'),
     path('contest/<int:contest_id>/lobby/', views.contest_lobby, name='contest_lobby'),
     path('contest/<int:contest_id>/problem/<int:problem_id>/ide/', views.problem_ide_view, name='problem_ide'),
+    path('contest/<int:contest_id>/problem/<int:problem_id>/submit/', views.submit_code, name='submit_code'),
+    path('submission/<int:submission_id>/status/', views.get_submission_status, name='submission_status'),
 ]

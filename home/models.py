@@ -150,6 +150,7 @@ class Submission(models.Model):
     # Optional: store execution time and memory for the result terminal
     execution_time = models.FloatField(default=0.0, help_text="Seconds")
     memory_used = models.IntegerField(default=0, help_text="KB")
+    error_message = models.TextField(blank=True, null=True, help_text="Compilation or Runtime errors")
 
     # NOTE: unique_together is REMOVED to allow multiple attempts
 

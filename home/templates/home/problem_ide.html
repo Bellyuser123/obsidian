@@ -962,6 +962,22 @@ main {
 }
 
 
+/* Phase C Enhancements */
+.glow-ac {
+  box-shadow: 0 0 10px var(--cyan), inset 0 0 10px var(--cyan);
+  border-color: var(--cyan) !important;
+  color: var(--cyan) !important;
+}
+
+@keyframes fadeInRow {
+  from { opacity: 0; transform: translateY(-10px); background-color: rgba(0, 255, 255, 0.2); }
+  to { opacity: 1; transform: translateY(0); background-color: transparent; }
+}
+
+.fade-in-row {
+  animation: fadeInRow 0.8s ease-out forwards;
+}
+
 /* ═══════════════════════════════════════
    RESPONSIVE
 ═══════════════════════════════════════ */
@@ -1238,7 +1254,7 @@ main {
       <div class="exec-topbar">
         <select class="lang-select" id="langSelect">
           {% for lang in allowed_languages %}
-            <option value="{{ lang.slug }}" data-ace-mode="{{ lang.ace_mode }}">{{ lang.name }}</option>
+            <option value="{{ lang.slug }}" data-id="{{ lang.id }}" data-ace-mode="{{ lang.ace_mode }}">{{ lang.name }}</option>
           {% empty %}
             <option value="plain" data-ace-mode="text">Plain Text</option>
           {% endfor %}
@@ -1617,12 +1633,164 @@ function runCode() {
     showResultTerminal(SAMPLE_RESULTS.run, 'run');
   }, 1200);
 }
-function submitCode() {
-  if (!getEditorValue().trim()) return;
-  showOverlay('JUDGING...');
-  setTimeout(() => {
+
+function getCookie(name) {
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+async function submitCode() {
+  const code = getEditorValue().trim();
+  if (!code) return;
+  const langOption = langSel.options[langSel.selectedIndex];
+  if (!langOption) return;
+  
+  const langId = langOption.dataset.id;
+  
+  showOverlay('QUEUING SUBMISSION...');
+  const csrftoken = getCookie('csrftoken');
+  
+  try {
+    const response = await fetch("{% url 'submit_code' contest.id problem.id %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrftoken
+      },
+      body: JSON.stringify({
+        code: code,
+        language_id: langId
+      })
+    });
+    
+    const data = await response.json();
     hideOverlay();
-    showResultTerminal(SAMPLE_RESULTS.submit, 'submit');
+    
+    if (response.ok) {
+      // Start real-time polling
+      pollSubmissionStatus(data.submission_id);
+    } else {
+      alert(`Error: ${data.error || 'Submission failed'}`);
+    }
+  } catch (error) {
+    hideOverlay();
+    alert('Network error occurred during submission.');
+    console.error("Submission error:", error);
+  }
+}
+
+let pollingInterval = null;
+let pollCount = 0;
+
+async function pollSubmissionStatus(submissionId) {
+  if (pollingInterval) clearInterval(pollingInterval);
+  pollCount = 0;
+  
+  showOverlay('JUDGING IN PROGRESS...');
+  
+  pollingInterval = setInterval(async () => {
+    pollCount++;
+    if (pollCount >= 30) {
+      clearInterval(pollingInterval);
+      hideOverlay();
+      const terminal  = document.getElementById('resultTerminal');
+      const summary   = document.getElementById('resultSummary');
+      const body = document.getElementById('resultBody');
+      
+      terminal.classList.add('visible');
+      summary.classList.remove('glow-ac');
+      summary.textContent = 'SYSTEM TIMEOUT - PLEASE RETRY';
+      summary.className = 'result-header-summary fail';
+      body.innerHTML = '';
+      return;
+    }
+
+    try {
+      const response = await fetch(`/submission/${submissionId}/status/`);
+      if (!response.ok) {
+        clearInterval(pollingInterval);
+        hideOverlay();
+        return;
+      }
+      
+      const data = await response.json();
+      
+      if (data.status !== 'PENDING') {
+        clearInterval(pollingInterval);
+        hideOverlay();
+        
+        const terminal  = document.getElementById('resultTerminal');
+        const summary   = document.getElementById('resultSummary');
+        const body = document.getElementById('resultBody');
+        
+        terminal.classList.add('visible');
+        
+        if (data.is_accepted) {
+          summary.textContent = `[ VERDICT: ACCEPTED | TIME: ${data.execution_time}s ]`;
+          summary.className = 'result-header-summary pass glow-ac';
+        } else {
+          summary.classList.remove('glow-ac');
+          summary.textContent = `[ VERDICT: ${data.status} | TIME: ${data.execution_time}s ]`;
+          summary.className = 'result-header-summary fail';
+        }
+        
+        body.innerHTML = '';
+        
+        if (data.status === 'RE' || data.status === 'CE') {
+          const errorMsg = document.createElement('pre');
+          errorMsg.style.color = 'var(--red)';
+          errorMsg.style.fontFamily = 'var(--px)';
+          errorMsg.style.fontSize = '12px';
+          errorMsg.style.whiteSpace = 'pre-wrap';
+          errorMsg.textContent = data.error_message || 'Unknown error occurred.';
+          body.appendChild(errorMsg);
+        } else {
+           const row = document.createElement('div');
+           row.className = 'result-row';
+           row.innerHTML = `<span class="result-status ${data.is_accepted ? 'rs-pass' : 'rs-fail'}">${data.status}</span>
+                            <span class="result-time">${data.execution_time}s</span>
+                            <span class="result-time">${data.memory_used}KB</span>`;
+           body.appendChild(row);
+        }
+        
+        const tbody = document.getElementById('subTableBody');
+        if (tbody) {
+          const tr = document.createElement('tr');
+          tr.className = 'fade-in-row';
+          const d = new Date();
+          const timeString = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+          const langText = document.getElementById('langSelect').options[document.getElementById('langSelect').selectedIndex].text;
+          tr.innerHTML = `
+            <td>${timeString}</td>
+            <td>${langText}</td>
+            <td style="color: var(--${data.is_accepted ? 'cyan' : 'red'})">${data.status}</td>
+            <td>${data.execution_time}s</td>
+            <td>${data.memory_used} KB</td>
+            <td style="text-align:right;">--</td>
+            <td></td>
+          `;
+          tbody.prepend(tr);
+          
+          const countEl = document.getElementById('subCount');
+          if (countEl) {
+             const curr = parseInt(countEl.textContent) || 0;
+             countEl.textContent = \`\${curr + 1} submissions\`;
+          }
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    }
   }, 2000);
 }
 window.runCode    = runCode;
