@@ -19,8 +19,12 @@ class ProfileAdmin(admin.ModelAdmin):
 
 
 class LanguageAdmin(admin.ModelAdmin):
-    list_display = ('name', 'slug', 'ace_mode', 'extension')
+    list_display = ('name', 'slug', 'docker_image', 'extension')
     prepopulated_fields = {'slug': ('name',)}
+    fieldsets = (
+        ('Basic Info', {'fields': ('name', 'slug', 'ace_mode', 'extension')}),
+        ('Execution Configuration', {'fields': ('docker_image', 'compile_command', 'run_command')}),
+    )
 
 
 class TestCaseInline(admin.TabularInline):
@@ -80,7 +84,19 @@ class SubmissionAdmin(admin.ModelAdmin):
     list_display = ('user', 'contest', 'problem', 'language', 'status', 'is_accepted', 'time_submitted')
     list_filter = ('status', 'is_accepted', 'language', 'contest')
     search_fields = ('user__username', 'problem__title', 'code')
-    readonly_fields = ('time_submitted',)
+    readonly_fields = ('user', 'contest', 'problem', 'language', 'code', 'status', 'is_accepted', 'time_submitted')
+
+    def has_view_permission(self, request, obj=None):
+        return True
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 class UserProblemSessionAdmin(admin.ModelAdmin):
@@ -93,9 +109,9 @@ class UserProblemSessionAdmin(admin.ModelAdmin):
 admin.site.register(Profile, ProfileAdmin)
 admin.site.register(Language, LanguageAdmin)
 admin.site.register(Problem, ProblemAdmin)
-# admin.site.register(ProblemRule) # Can be registered separately or just via Inline
+# admin.site.register(ProblemRule) Can be registered separately or just via Inline
 admin.site.register(Contest, ContestAdmin)
-# admin.site.register(TestCase)    # Usually managed via Inline, but good to have
+# admin.site.register(TestCase) Usually managed via Inline, but good to have
 admin.site.register(Submission, SubmissionAdmin)
 # admin.site.register(UserProblemSession, UserProblemSessionAdmin)
-# admin.site.register(ContestProblem) # Managed via Inline but registered for direct access
+# admin.site.register(ContestProblem) Managed via Inline but registered for direct access

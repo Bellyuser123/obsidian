@@ -19,7 +19,11 @@ class Language(models.Model):
     slug = models.SlugField(unique=True)   # e.g. python3
     ace_mode = models.CharField(max_length=50, help_text="Used for IDE syntax highlighting")
     extension = models.CharField(max_length=10, default=".py")
-
+    
+    # Execution Rules
+    docker_image = models.CharField(max_length=100, default="python:3.12-slim", help_text="Docker image to use (e.g. gcc:latest)")
+    compile_command = models.CharField(max_length=255, blank=True, null=True, help_text="Optional. Use {filename} for source file.")
+    run_command = models.CharField(max_length=255, default="python {filename}", help_text="Command to run. Use {filename} for source file.")
     def __str__(self): return self.name
 
 

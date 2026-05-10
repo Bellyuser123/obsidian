@@ -6,12 +6,13 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from .models import Contest, ContestProblem, Language
+from .models import Contest, ContestProblem, Language, Problem, TestCase
 from .models import Submission
+from .utils import run_in_docker
 from django.db.utils import OperationalError
 from django.http import JsonResponse
 from django.urls import reverse
-
+import json
 
 def auth_view(request):
     if request.method == "POST":
@@ -276,3 +277,74 @@ def problem_ide_view(request, contest_id, problem_id):
         'code_stubs_json': code_stubs_json,
     }
     return render(request, 'home/problem_ide.html', context)
+
+
+@login_required
+def handle_submission(request, contest_id, problem_id):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST required'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+    
+    action_type = data.get('type')
+    code = data.get('code', '').strip()
+    language_slug = data.get('language')
+
+    if not code:
+        return JsonResponse({'ok': False, 'error': 'Code is empty'}, status=400)
+    if len(code) > 60000:
+        return JsonResponse({'ok': False, 'error': 'Code exceeds maximum size of 60KB'}, status=400)
+        
+    if action_type == 'RUN':
+        # Filler logic for "Run"
+        return JsonResponse({'ok': True, 'status': 'testing', 'message': 'Run initiated'})
+        
+    elif action_type == 'SUBMIT':
+        try:
+            contest = Contest.objects.get(id=contest_id)
+            problem = Problem.objects.get(id=problem_id)
+            language = Language.objects.get(slug=language_slug)
+        except (Contest.DoesNotExist, Problem.DoesNotExist, Language.DoesNotExist):
+            return JsonResponse({'ok': False, 'error': 'Invalid Contest, Problem, or Language ID'}, status=404)
+        
+        submission = Submission.objects.create(
+            user=request.user,
+            contest=contest,
+            problem=problem,
+            code=code,
+            language=language,
+            status='PENDING',
+            is_accepted=False
+        )
+        
+        # Evaluate using the first test case
+        test_case = problem.testcases.first()
+        if not test_case:
+            submission.status = 'RE'
+            submission.save()
+            return JsonResponse({'ok': False, 'error': 'No test cases configured for this problem'})
+            
+        result = run_in_docker(code, language, test_case.input_data)
+        
+        if result['status'] == 'TLE':
+            submission.status = 'TLE'
+        elif result['status'] == 'RE':
+            submission.status = 'RE'
+        elif result['status'] == 'SUCCESS':
+            # Compare output (normalize line endings)
+            expected = test_case.expected_output.strip().replace('\r\n', '\n')
+            actual = result.get('output', '').strip().replace('\r\n', '\n')
+            
+            if expected == actual:
+                submission.status = 'AC'
+                submission.is_accepted = True
+            else:
+                submission.status = 'WA'
+                
+        submission.save()
+        return JsonResponse({'ok': True, 'status': submission.status, 'submission_id': submission.id})
+    else:
+        return JsonResponse({'ok': False, 'error': 'Invalid action type'}, status=400)
