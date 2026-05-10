@@ -3,1000 +3,1643 @@
 
 {% block extra_css %}
 <style>
-/* ═══════════════════════════════════════════════════════════
+  /* ═══════════════════════════════════════════════════════════
    OBSIDIAN — PROBLEM IDE
    High-productivity competitive programming environment
    No animations · Sharp clip-path corners · Utility-grid feel
 ═══════════════════════════════════════════════════════════ */
 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
 
-:root {
-  /* Core palette */
-  --bg:           #0a0a0f;
-  --surface:      #111120;
-  --surface-2:    #161628;
-  --surface-3:    #1c1c38;
-  --surface-4:    #0d0d1e;
-  --border:       #252545;
-  --border-dim:   #1a1a32;
-  --border-bright:#353560;
+  :root {
+    /* Core palette */
+    --bg: #0a0a0f;
+    --surface: #111120;
+    --surface-2: #161628;
+    --surface-3: #1c1c38;
+    --surface-4: #0d0d1e;
+    --border: #252545;
+    --border-dim: #1a1a32;
+    --border-bright: #353560;
 
-  /* Accents */
-  --cyan:         #00e5cc;
-  --cyan-dim:     rgba(0,229,204,0.10);
-  --cyan-mid:     rgba(0,229,204,0.35);
-  --cyan-text:    #33eedb;
-  --purple:       #7b2fff;
-  --purple-dim:   rgba(123,47,255,0.14);
-  --purple-text:  #a76bff;
+    /* Accents */
+    --cyan: #00e5cc;
+    --cyan-dim: rgba(0, 229, 204, 0.10);
+    --cyan-mid: rgba(0, 229, 204, 0.35);
+    --cyan-text: #33eedb;
+    --purple: #7b2fff;
+    --purple-dim: rgba(123, 47, 255, 0.14);
+    --purple-text: #a76bff;
 
-  /* Semantic */
-  --green:        #2dff8a;
-  --green-dim:    rgba(45,255,138,0.10);
-  --red:          #ff4060;
-  --red-dim:      rgba(255,64,96,0.10);
-  --yellow:       #f0c040;
-  --yellow-dim:   rgba(240,192,64,0.10);
+    /* Semantic */
+    --green: #2dff8a;
+    --green-dim: rgba(45, 255, 138, 0.10);
+    --red: #ff4060;
+    --red-dim: rgba(255, 64, 96, 0.10);
+    --yellow: #f0c040;
+    --yellow-dim: rgba(240, 192, 64, 0.10);
 
-  /* Text */
-  --text:         #d4d4f0;
-  --text-mid:     #8888b0;
-  --text-dim:     #484870;
-  --text-code:    #cdd6f4;
+    /* Text */
+    --text: #d4d4f0;
+    --text-mid: #8888b0;
+    --text-dim: #484870;
+    --text-code: #cdd6f4;
 
-  /* Typography */
-  --px: 'Press Start 2P', monospace;
-  --mn: 'JetBrains Mono', monospace;
+    /* Typography */
+    --px: 'Press Start 2P', monospace;
+    --mn: 'JetBrains Mono', monospace;
 
-  /* Clip-paths */
-  --clip-sm:  polygon(0 0, calc(100% - 6px) 0,  100% 6px,  100% 100%, 6px 100%,  0 calc(100% - 6px));
-  --clip-md:  polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
-  --clip-oct: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
+    /* Clip-paths */
+    --clip-sm: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    --clip-md: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+    --clip-oct: polygon(6px 0%, calc(100% - 6px) 0%, 100% 6px, 100% calc(100% - 6px), calc(100% - 6px) 100%, 6px 100%, 0% calc(100% - 6px), 0% 6px);
 
-  /* Layout */
-  --header-h: 54px;
-  --tabbar-h: 40px;
-  --total-chrome: calc(var(--header-h) + var(--tabbar-h));
-}
+    /* Layout */
+    --header-h: 54px;
+    --tabbar-h: 40px;
+    --total-chrome: calc(var(--header-h) + var(--tabbar-h));
+  }
 
-html { height: 100%; }
+  html {
+    height: 100%;
+  }
 
-body {
-  min-height: 100%;
-  height: 100vh;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--mn);
-  font-size: 13px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden; /* page itself doesn't scroll */
-}
+  body {
+    min-height: 100%;
+    height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mn);
+    font-size: 13px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* page itself doesn't scroll */
+  }
 
-main {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
+  main {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
 
-/* Keep IDE background as its original flat style (no matrix rain/grid overlays). */
-.scanline,
-.pixel-grid,
-#matrixCanvas {
-  display: none !important;
-}
+  /* Keep IDE background as its original flat style (no matrix rain/grid overlays). */
+  .scanline,
+  .pixel-grid,
+  #matrixCanvas {
+    display: none !important;
+  }
 
-/* ── Global scrollbar ── */
-* { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
-::-webkit-scrollbar { width: 4px; height: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); }
-::-webkit-scrollbar-thumb:hover { background: var(--border-bright); }
+  /* ── Global scrollbar ── */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-bright);
+  }
 
 
-/* ═══════════════════════════════════════
+  /* ═══════════════════════════════════════
    PAGE HEADER
 ═══════════════════════════════════════ */
-.page-header {
-  flex-shrink: 0;
-  height: var(--header-h);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border-dim);
-  display: flex;
-  align-items: center;
-  padding: 0 24px;
-  gap: 20px;
-}
+  .page-header {
+    flex-shrink: 0;
+    height: var(--header-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border-dim);
+    display: flex;
+    align-items: center;
+    padding: 0 24px;
+    gap: 20px;
+  }
 
-.header-back {
-  font-family: var(--mn);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 1.5px;
-  color: var(--text-dim);
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-shrink: 0;
-  transition: color 0.1s;
-}
-.header-back:hover { color: var(--cyan); }
-.header-back .arr { font-size: 13px; }
+  .header-back {
+    font-family: var(--mn);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-shrink: 0;
+    transition: color 0.1s;
+  }
 
-.header-divider {
-  width: 1px;
-  height: 20px;
-  background: var(--border);
-  flex-shrink: 0;
-}
+  .header-back:hover {
+    color: var(--cyan);
+  }
 
-.header-title {
-  font-family: var(--px);
-  font-size: clamp(8px, 1.3vw, 11px);
-  letter-spacing: 2px;
-  color: #fff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.header-title .accent { color: #fff; }
+  .header-back .arr {
+    font-size: 13px;
+  }
 
-.header-spacer { flex: 1; }
+  .header-divider {
+    width: 1px;
+    height: 20px;
+    background: var(--border);
+    flex-shrink: 0;
+  }
 
-.header-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-shrink: 0;
-}
+  .header-title {
+    font-family: var(--px);
+    font-size: clamp(8px, 1.3vw, 11px);
+    letter-spacing: 2px;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-.meta-badge {
-  font-family: var(--mn);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  padding: 3px 9px;
-  border: 1px solid;
-  clip-path: var(--clip-sm);
-  white-space: nowrap;
-}
-.badge-pts    { color: var(--cyan);         border-color: var(--cyan-mid);              background: var(--cyan-dim); }
-.badge-diff   { color: var(--yellow);        border-color: rgba(240,192,64,0.35);       background: var(--yellow-dim); }
-.badge-status { color: var(--green);         border-color: rgba(45,255,138,0.35);       background: var(--green-dim); }
-.badge-status-upcoming { color: var(--yellow); border-color: rgba(240,192,64,0.35); background: var(--yellow-dim); }
-.badge-status-ended { color: var(--red); border-color: rgba(255,64,96,0.35); background: var(--red-dim); }
+  .header-title .accent {
+    color: #fff;
+  }
 
-.header-timer {
-  font-family: var(--mn);
-  font-size: 15px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 3px;
-  color: var(--cyan);
-  padding: 4px 12px;
-  background: var(--cyan-dim);
-  border: 1px solid var(--cyan-mid);
-  clip-path: var(--clip-sm);
-}
+  .header-spacer {
+    flex: 1;
+  }
+
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .meta-badge {
+    font-family: var(--mn);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    padding: 3px 9px;
+    border: 1px solid;
+    clip-path: var(--clip-sm);
+    white-space: nowrap;
+  }
+
+  .badge-pts {
+    color: var(--cyan);
+    border-color: var(--cyan-mid);
+    background: var(--cyan-dim);
+  }
+
+  .badge-diff {
+    color: var(--yellow);
+    border-color: rgba(240, 192, 64, 0.35);
+    background: var(--yellow-dim);
+  }
+
+  .badge-status {
+    color: var(--green);
+    border-color: rgba(45, 255, 138, 0.35);
+    background: var(--green-dim);
+  }
+
+  .badge-status-upcoming {
+    color: var(--yellow);
+    border-color: rgba(240, 192, 64, 0.35);
+    background: var(--yellow-dim);
+  }
+
+  .badge-status-ended {
+    color: var(--red);
+    border-color: rgba(255, 64, 96, 0.35);
+    background: var(--red-dim);
+  }
+
+  .header-timer {
+    font-family: var(--mn);
+    font-size: 15px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 3px;
+    color: var(--cyan);
+    padding: 4px 12px;
+    background: var(--cyan-dim);
+    border: 1px solid var(--cyan-mid);
+    clip-path: var(--clip-sm);
+  }
 
 
-/* ═══════════════════════════════════════
+  /* ═══════════════════════════════════════
    TAB BAR
 ═══════════════════════════════════════ */
-.tab-bar {
-  flex-shrink: 0;
-  height: var(--tabbar-h);
-  background: var(--surface-4);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: stretch;
-  padding: 0 24px;
-  gap: 2px;
-}
+  .tab-bar {
+    flex-shrink: 0;
+    height: var(--tabbar-h);
+    background: var(--surface-4);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: stretch;
+    padding: 0 24px;
+    gap: 2px;
+  }
 
-.tab-btn {
-  font-family: var(--px);
-  font-size: 7px;
-  letter-spacing: 1.5px;
-  padding: 0 18px;
-  background: transparent;
-  color: var(--text-dim);
-  border: none;
-  border-bottom: 2px solid transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  white-space: nowrap;
-  transition: color 0.1s, border-color 0.1s;
-  position: relative;
-  top: 1px; /* optical — sit on the border */
-}
-.tab-btn:hover { color: var(--text-mid); }
-.tab-btn.active {
-  color: var(--cyan);
-  border-bottom-color: var(--cyan);
-}
+  .tab-btn {
+    font-family: var(--px);
+    font-size: 7px;
+    letter-spacing: 1.5px;
+    padding: 0 18px;
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+    transition: color 0.1s, border-color 0.1s;
+    position: relative;
+    top: 1px;
+    /* optical — sit on the border */
+  }
 
-.tab-spacer { flex: 1; }
+  .tab-btn:hover {
+    color: var(--text-mid);
+  }
 
-.tab-bar-right {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  font-family: var(--mn);
-  font-size: 10px;
-  color: var(--text-dim);
-  letter-spacing: 1.5px;
-}
-.tab-bar-right .contest-name { color: var(--text-mid); }
+  .tab-btn.active {
+    color: var(--cyan);
+    border-bottom-color: var(--cyan);
+  }
+
+  .tab-spacer {
+    flex: 1;
+  }
+
+  .tab-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: var(--mn);
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1.5px;
+  }
+
+  .tab-bar-right .contest-name {
+    color: var(--text-mid);
+  }
 
 
-/* ═══════════════════════════════════════
+  /* ═══════════════════════════════════════
    CONTENT AREA (fills remaining height)
 ═══════════════════════════════════════ */
-.content-area {
-  flex: 1;
-  min-height: 0;
-  position: relative;
-}
+  .content-area {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+  }
 
-.tab-panel {
-  display: none;
-  height: 100%;
-}
-.tab-panel.active { display: flex; }
+  .tab-panel {
+    display: none;
+    height: 100%;
+  }
+
+  .tab-panel.active {
+    display: flex;
+  }
 
 
-/* ═══════════════════════════════════════
+  /* ═══════════════════════════════════════
    PROBLEM TAB — 50/50 SPLIT
 ═══════════════════════════════════════ */
-#panel-problem {
-  flex-direction: row;
-}
+  #panel-problem {
+    flex-direction: row;
+  }
 
-/* ──────────────────────────────────────
+  /* ──────────────────────────────────────
    LEFT — BRIEFING
 ────────────────────────────────────── */
-.briefing {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  border-right: 1px solid var(--border);
-  overflow: hidden;
-}
+  .briefing {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+  }
 
-.briefing-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 24px 28px 36px;
-}
+  .briefing-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px 36px;
+  }
 
-/* Section label */
-.section-label {
-  font-family: var(--px);
-  font-size: 7px;
-  letter-spacing: 2.5px;
-  color: var(--text-dim);
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.section-label::before { content: '//'; color: var(--border-bright); margin-right: 2px; }
-.section-label::after  { content: ''; flex: 1; height: 1px; background: var(--border-dim); }
+  /* Section label */
+  .section-label {
+    font-family: var(--px);
+    font-size: 7px;
+    letter-spacing: 2.5px;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
 
-.briefing-section { margin-bottom: 28px; }
+  .section-label::before {
+    content: '//';
+    color: var(--border-bright);
+    margin-right: 2px;
+  }
 
-/* Body text */
-.problem-text {
-  font-family: var(--mn);
-  font-size: 12.5px;
-  color: var(--text);
-  line-height: 1.8;
-}
-.problem-text strong { color: var(--cyan-text); font-weight: 600; }
-.problem-text em     { color: var(--text-mid); font-style: normal; font-weight: 300; }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border-dim);
+  }
 
-/* Constraint list */
-.constraint-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-.constraint-list li {
-  font-family: var(--mn);
-  font-size: 12px;
-  color: var(--text);
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  padding: 5px 10px;
-  background: var(--surface-2);
-  border-left: 2px solid var(--border);
-}
-.constraint-list li::before {
-  content: '—';
-  color: var(--text-dim);
-  flex-shrink: 0;
-}
-.constraint-list li code {
-  font-family: var(--mn);
-  color: var(--purple-text);
-  background: var(--purple-dim);
-  padding: 1px 5px;
-  font-size: 11.5px;
-}
+  .briefing-section {
+    margin-bottom: 28px;
+  }
 
-/* Sample test case block */
-.sample-block {
-  background: var(--surface-2);
-  border: 1px solid var(--border);
-  clip-path: var(--clip-md);
-  margin-bottom: 16px;
-  overflow: hidden;
-}
-.sample-header {
-  display: flex;
-  align-items: center;
-  padding: 7px 14px;
-  background: var(--surface-3);
-  border-bottom: 1px solid var(--border);
-  gap: 8px;
-}
-.sample-id {
-  font-family: var(--px);
-  font-size: 6px;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-}
-.sample-copy-btn {
-  margin-left: auto;
-  font-family: var(--mn);
-  font-size: 9px;
-  letter-spacing: 1px;
-  color: var(--text-dim);
-  background: none;
-  border: 1px solid var(--border);
-  padding: 2px 8px;
-  cursor: pointer;
-  clip-path: var(--clip-sm);
-  transition: color 0.1s, border-color 0.1s;
-}
-.sample-copy-btn:hover { color: var(--cyan); border-color: var(--cyan-mid); }
+  /* Body text */
+  .problem-text {
+    font-family: var(--mn);
+    font-size: 12.5px;
+    color: var(--text);
+    line-height: 1.8;
+  }
 
-.sample-io {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  border-bottom: 1px solid var(--border);
-}
-.sample-col {
-  padding: 12px 14px;
-}
-.sample-col:first-child { border-right: 1px solid var(--border); }
-.sample-col-label {
-  font-family: var(--mn);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-  margin-bottom: 8px;
-  text-transform: uppercase;
-}
-.sample-code {
-  font-family: var(--mn);
-  font-size: 12px;
-  color: var(--text-code);
-  line-height: 1.7;
-  white-space: pre;
-}
+  .problem-text strong {
+    color: var(--cyan-text);
+    font-weight: 600;
+  }
 
-.sample-explanation {
-  padding: 11px 14px;
-}
-.sample-explanation-label {
-  font-family: var(--mn);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-  margin-bottom: 6px;
-  text-transform: uppercase;
-}
-.sample-explanation-text {
-  font-family: var(--mn);
-  font-size: 12px;
-  color: var(--text-mid);
-  line-height: 1.7;
-}
-.sample-explanation-text code {
-  font-family: var(--mn);
-  color: var(--cyan-text);
-  background: var(--cyan-dim);
-  padding: 0 4px;
-}
+  .problem-text em {
+    color: var(--text-mid);
+    font-style: normal;
+    font-weight: 300;
+  }
+
+  /* Constraint list */
+  .constraint-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .constraint-list li {
+    font-family: var(--mn);
+    font-size: 12px;
+    color: var(--text);
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 5px 10px;
+    background: var(--surface-2);
+    border-left: 2px solid var(--border);
+  }
+
+  .constraint-list li::before {
+    content: '—';
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .constraint-list li code {
+    font-family: var(--mn);
+    color: var(--purple-text);
+    background: var(--purple-dim);
+    padding: 1px 5px;
+    font-size: 11.5px;
+  }
+
+  /* Sample test case block */
+  .sample-block {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    clip-path: var(--clip-md);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .sample-header {
+    display: flex;
+    align-items: center;
+    padding: 7px 14px;
+    background: var(--surface-3);
+    border-bottom: 1px solid var(--border);
+    gap: 8px;
+  }
+
+  .sample-id {
+    font-family: var(--px);
+    font-size: 6px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+
+  .sample-copy-btn {
+    margin-left: auto;
+    font-family: var(--mn);
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 2px 8px;
+    cursor: pointer;
+    clip-path: var(--clip-sm);
+    transition: color 0.1s, border-color 0.1s;
+  }
+
+  .sample-copy-btn:hover {
+    color: var(--cyan);
+    border-color: var(--cyan-mid);
+  }
+
+  .sample-io {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sample-col {
+    padding: 12px 14px;
+  }
+
+  .sample-col:first-child {
+    border-right: 1px solid var(--border);
+  }
+
+  .sample-col-label {
+    font-family: var(--mn);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 8px;
+    text-transform: uppercase;
+  }
+
+  .sample-code {
+    font-family: var(--mn);
+    font-size: 12px;
+    color: var(--text-code);
+    line-height: 1.7;
+    white-space: pre;
+  }
+
+  .sample-explanation {
+    padding: 11px 14px;
+  }
+
+  .sample-explanation-label {
+    font-family: var(--mn);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  .sample-explanation-text {
+    font-family: var(--mn);
+    font-size: 12px;
+    color: var(--text-mid);
+    line-height: 1.7;
+  }
+
+  .sample-explanation-text code {
+    font-family: var(--mn);
+    color: var(--cyan-text);
+    background: var(--cyan-dim);
+    padding: 0 4px;
+  }
 
 
-/* ──────────────────────────────────────
+  /* ──────────────────────────────────────
    RIGHT — EXECUTION (IDE)
 ────────────────────────────────────── */
-.execution {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-/* Top utility bar */
-.exec-topbar {
-  flex-shrink: 0;
-  height: 38px;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  gap: 10px;
-}
-
-.lang-select {
-  font-family: var(--mn);
-  font-size: 11px;
-  font-weight: 500;
-  letter-spacing: 1px;
-  color: var(--text);
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  padding: 4px 28px 4px 10px;
-  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%);
-  cursor: pointer;
-  appearance: none;
-  -webkit-appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23484870'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 9px center;
-  transition: border-color 0.1s;
-}
-.lang-select:focus { outline: none; border-color: var(--cyan-mid); }
-.lang-select option { background: var(--surface-3); color: var(--text); }
-
-.exec-topbar-spacer { flex: 1; }
-
-.icon-btn {
-  width: 28px; height: 28px;
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px;
-  clip-path: var(--clip-sm);
-  transition: color 0.1s, border-color 0.1s, background 0.1s;
-  flex-shrink: 0;
-}
-.icon-btn:hover { color: var(--text); border-color: var(--border-bright); background: var(--surface-4); }
-.icon-btn[title]:hover::after {
-  content: attr(title);
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  font-family: var(--mn);
-  font-size: 9px;
-  color: var(--text-mid);
-  background: var(--surface-3);
-  border: 1px solid var(--border);
-  padding: 3px 8px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 100;
-}
-
-/* Code editor area */
-.editor-area {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  overflow: hidden;
-  background: var(--surface-4);
-  font-family: var(--mn);
-  font-size: 13px;
-  line-height: 1.65;
-  position: relative;
-}
-
-.line-numbers {
-  flex-shrink: 0;
-  width: 44px;
-  padding: 14px 0;
-  background: var(--surface-2);
-  border-right: 1px solid var(--border-dim);
-  text-align: right;
-  overflow: hidden;
-  user-select: none;
-}
-.line-num {
-  display: block;
-  padding: 0 10px;
-  font-family: var(--mn);
-  font-size: 12px;
-  color: var(--text-dim);
-  line-height: 1.65;
-}
-.line-num.active { color: var(--text-mid); }
-
-.code-editor {
-  flex: 1;
-  min-width: 0;
-  padding: 0;
-  background: transparent;
-  border: none;
-  color: var(--text-code);
-  font-family: var(--mn);
-  font-size: 13px;
-  line-height: 1.65;
-  outline: none;
-  overflow: hidden;
-}
-.code-editor::selection { background: rgba(123,47,255,0.3); }
-
-.code-editor-fallback {
-  display: none;
-  padding: 14px 16px;
-  resize: none;
-  overflow-y: auto;
-  tab-size: 4;
-  white-space: pre;
-  caret-color: var(--cyan);
-}
-
-#codeEditor .ace_gutter {
-  background: var(--surface-2);
-  color: var(--text-dim);
-  border-right: 1px solid var(--border-dim);
-}
-
-#codeEditor .ace_print-margin {
-  width: 0 !important;
-}
-
-/* Bottom utility bar */
-.exec-bottombar {
-  flex-shrink: 0;
-  height: 44px;
-  background: var(--surface-2);
-  border-top: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  padding: 0 14px;
-  gap: 12px;
-}
-
-.custom-input-toggle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  user-select: none;
-}
-.custom-cb {
-  width: 13px; height: 13px;
-  border: 1px solid var(--border-bright);
-  background: var(--surface-4);
-  flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 9px;
-  color: var(--cyan);
-  cursor: pointer;
-  /* sharp square — no clip-path needed at this size */
-}
-.custom-cb.checked::after { content: '✓'; }
-
-.custom-input-label {
-  font-family: var(--mn);
-  font-size: 10px;
-  letter-spacing: 1px;
-  color: var(--text-dim);
-  transition: color 0.1s;
-}
-.custom-input-toggle:hover .custom-input-label { color: var(--text-mid); }
-
-.exec-bottombar-spacer { flex: 1; }
-
-/* Action buttons */
-.btn-run, .btn-submit {
-  font-family: var(--mn);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  padding: 7px 18px;
-  border: 1px solid;
-  cursor: pointer;
-  clip-path: var(--clip-oct);
-  transition: background 0.1s, color 0.1s, box-shadow 0.1s;
-  white-space: nowrap;
-}
-.btn-run {
-  color: var(--cyan);
-  background: transparent;
-  border-color: rgba(0,229,204,0.45);
-}
-.btn-run:hover {
-  background: rgba(0,229,204,0.08);
-  border-color: var(--cyan);
-}
-.btn-submit {
-  color: #000;
-  background: var(--cyan);
-  border-color: var(--cyan);
-  font-weight: 700;
-}
-.btn-submit:hover {
-  background: var(--cyan-text);
-  border-color: var(--cyan-text);
-  box-shadow: 0 0 20px rgba(0,229,204,0.25);
-}
-.btn-submit:active { box-shadow: none; transform: scale(0.99); }
-
-/* Custom input textarea */
-.custom-input-area {
-  flex-shrink: 0;
-  display: none;
-  flex-direction: column;
-  border-top: 1px solid var(--border);
-  background: var(--surface-4);
-}
-.custom-input-area.visible { display: flex; }
-.custom-input-header {
-  padding: 7px 14px;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
-  font-family: var(--px);
-  font-size: 6.5px;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-}
-.custom-textarea {
-  flex: 1;
-  min-height: 70px;
-  max-height: 120px;
-  padding: 10px 14px;
-  background: transparent;
-  border: none;
-  color: var(--text-code);
-  font-family: var(--mn);
-  font-size: 12.5px;
-  line-height: 1.6;
-  resize: vertical;
-  outline: none;
-  caret-color: var(--cyan);
-}
-
-/* Result terminal */
-.result-terminal {
-  flex-shrink: 0;
-  display: none;
-  flex-direction: column;
-  border-top: 1px solid var(--border);
-  background: var(--bg);
-  max-height: 200px;
-}
-.result-terminal.visible { display: flex; }
-
-.result-header {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 7px 14px;
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
-  cursor: pointer;
-  user-select: none;
-}
-.result-header-label {
-  font-family: var(--px);
-  font-size: 6.5px;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-}
-.result-header-summary {
-  font-family: var(--mn);
-  font-size: 10px;
-  letter-spacing: 1px;
-}
-.result-header-summary.pass { color: var(--green); }
-.result-header-summary.fail { color: var(--red); }
-.result-header-summary.run  { color: var(--cyan); }
-.result-spacer { flex: 1; }
-.result-collapse {
-  font-family: var(--mn);
-  font-size: 11px;
-  color: var(--text-dim);
-  cursor: pointer;
-}
-
-.result-body {
-  overflow-y: auto;
-  padding: 10px 14px 14px;
-}
-
-.result-row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border-dim);
-  font-family: var(--mn);
-  font-size: 11.5px;
-}
-.result-row:last-child { border-bottom: none; }
-
-.result-case-id {
-  color: var(--text-dim);
-  letter-spacing: 1px;
-  flex-shrink: 0;
-  font-size: 10.5px;
-}
-.result-status {
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  font-size: 10px;
-  flex-shrink: 0;
-  padding: 2px 8px;
-  clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
-}
-.rs-pass {
-  color: var(--green);
-  background: var(--green-dim);
-  border: 1px solid rgba(45,255,138,0.3);
-}
-.rs-fail {
-  color: var(--red);
-  background: var(--red-dim);
-  border: 1px solid rgba(255,64,96,0.3);
-}
-.rs-tle {
-  color: var(--yellow);
-  background: var(--yellow-dim);
-  border: 1px solid rgba(240,192,64,0.3);
-}
-.result-detail {
-  color: var(--text-dim);
-  font-size: 10.5px;
-  letter-spacing: 0.5px;
-}
-.result-time {
-  margin-left: auto;
-  color: var(--text-dim);
-  font-size: 10px;
-  letter-spacing: 1px;
-  white-space: nowrap;
-}
-
-
-/* ═══════════════════════════════════════
-   SUBMISSIONS TAB
-═══════════════════════════════════════ */
-#panel-submissions {
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.submissions-header {
-  flex-shrink: 0;
-  padding: 20px 28px 14px;
-  border-bottom: 1px solid var(--border-dim);
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-.submissions-title {
-  font-family: var(--px);
-  font-size: 8px;
-  letter-spacing: 2px;
-  color: var(--cyan);
-}
-.submissions-count {
-  font-family: var(--mn);
-  font-size: 10px;
-  letter-spacing: 1.5px;
-  color: var(--text-dim);
-}
-
-.submissions-scroll {
-  flex: 1;
-  overflow-y: auto;
-  padding: 0 28px 28px;
-}
-
-/* Submissions table */
-.sub-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin-top: 14px;
-}
-.sub-table thead tr {
-  background: var(--surface-2);
-  border-bottom: 1px solid var(--border);
-}
-.sub-table thead th {
-  font-family: var(--mn);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  padding: 9px 14px;
-  text-align: left;
-  white-space: nowrap;
-}
-.sub-table thead th:last-child { text-align: right; }
-
-.sub-table tbody tr {
-  border-bottom: 1px solid var(--border-dim);
-  transition: background 0.08s;
-}
-.sub-table tbody tr:hover { background: rgba(255,255,255,0.02); }
-.sub-table tbody tr:last-child { border-bottom: none; }
-
-.sub-table tbody td {
-  font-family: var(--mn);
-  font-size: 11.5px;
-  color: var(--text);
-  padding: 10px 14px;
-  vertical-align: middle;
-}
-
-.sub-ts {
-  color: var(--text-mid) !important;
-  font-size: 10.5px !important;
-  white-space: nowrap;
-}
-
-.sub-lang {
-  color: var(--purple-text) !important;
-  letter-spacing: 0.5px;
-}
-
-.sub-status-cell { white-space: nowrap; }
-.sub-status {
-  font-family: var(--mn);
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  padding: 2px 8px;
-  clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
-}
-.sub-ac  { color: var(--green);  background: var(--green-dim);  border: 1px solid rgba(45,255,138,0.3); }
-.sub-wa  { color: var(--red);    background: var(--red-dim);    border: 1px solid rgba(255,64,96,0.3); }
-.sub-tle { color: var(--yellow); background: var(--yellow-dim); border: 1px solid rgba(240,192,64,0.3); }
-.sub-ce  { color: var(--text-mid); background: var(--surface-3); border: 1px solid var(--border); }
-
-.sub-score {
-  text-align: right;
-  font-weight: 600 !important;
-  letter-spacing: 1px;
-}
-.sub-score.full { color: var(--cyan) !important; }
-.sub-score.partial { color: var(--yellow) !important; }
-.sub-score.zero { color: var(--text-dim) !important; }
-
-/* Empty state */
-.sub-empty {
-  text-align: center;
-  padding: 48px 20px;
-}
-.sub-empty-icon {
-  font-size: 28px;
-  margin-bottom: 12px;
-  opacity: 0.3;
-}
-.sub-empty-text {
-  font-family: var(--mn);
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-}
-
-/* Re-submit button in table */
-.btn-view-sub {
-  font-family: var(--mn);
-  font-size: 9px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  padding: 4px 10px;
-  color: var(--text-dim);
-  background: transparent;
-  border: 1px solid var(--border);
-  clip-path: var(--clip-sm);
-  cursor: pointer;
-  text-decoration: none;
-  display: inline-block;
-  transition: color 0.1s, border-color 0.1s;
-}
-.btn-view-sub:hover { color: var(--cyan); border-color: var(--cyan-mid); }
-
-
-/* ═══════════════════════════════════════
-   LOADING OVERLAY (Run / Submit)
-═══════════════════════════════════════ */
-.run-overlay {
-  display: none;
-  position: absolute;
-  inset: 0;
-  background: rgba(10,10,15,0.7);
-  z-index: 50;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: 12px;
-}
-.run-overlay.active { display: flex; }
-.run-spinner {
-  font-family: var(--mn);
-  font-size: 13px;
-  color: var(--cyan);
-  letter-spacing: 3px;
-  animation: spin-dots 1.2s steps(4) infinite;
-}
-@keyframes spin-dots {
-  0%   { content: ''; }
-  25%  { opacity: .6; }
-  50%  { opacity: .4; }
-  75%  { opacity: .2; }
-  100% { opacity: 1; }
-}
-.run-msg {
-  font-family: var(--px);
-  font-size: 7px;
-  letter-spacing: 2px;
-  color: var(--text-dim);
-}
-
-
-/* Phase C Enhancements */
-.glow-ac {
-  box-shadow: 0 0 10px var(--cyan), inset 0 0 10px var(--cyan);
-  border-color: var(--cyan) !important;
-  color: var(--cyan) !important;
-}
-
-@keyframes fadeInRow {
-  from { opacity: 0; transform: translateY(-10px); background-color: rgba(0, 255, 255, 0.2); }
-  to { opacity: 1; transform: translateY(0); background-color: transparent; }
-}
-
-.fade-in-row {
-  animation: fadeInRow 0.8s ease-out forwards;
-}
-
-/* ═══════════════════════════════════════
-   RESPONSIVE
-═══════════════════════════════════════ */
-@media (max-width: 900px) {
-  #panel-problem {
+  .execution {
+    flex: 1;
+    min-width: 0;
+    display: flex;
     flex-direction: column;
+    min-height: 0;
+  }
+
+  /* Top utility bar */
+  .exec-topbar {
+    flex-shrink: 0;
+    height: 38px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+  }
+
+  .lang-select {
+    font-family: var(--mn);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 1px;
+    color: var(--text);
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    padding: 4px 28px 4px 10px;
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23484870'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    transition: border-color 0.1s;
+  }
+
+  .lang-select:focus {
+    outline: none;
+    border-color: var(--cyan-mid);
+  }
+
+  .lang-select option {
+    background: var(--surface-3);
+    color: var(--text);
+  }
+
+  .exec-topbar-spacer {
+    flex: 1;
+  }
+
+  .icon-btn {
+    width: 28px;
+    height: 28px;
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    clip-path: var(--clip-sm);
+    transition: color 0.1s, border-color 0.1s, background 0.1s;
+    flex-shrink: 0;
+  }
+
+  .icon-btn:hover {
+    color: var(--text);
+    border-color: var(--border-bright);
+    background: var(--surface-4);
+  }
+
+  .icon-btn[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    font-family: var(--mn);
+    font-size: 9px;
+    color: var(--text-mid);
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+    padding: 3px 8px;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 100;
+  }
+
+  /* Code editor area */
+  .editor-area {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    overflow: hidden;
+    background: var(--surface-4);
+    font-family: var(--mn);
+    font-size: 13px;
+    line-height: 1.65;
+    position: relative;
+  }
+
+  .line-numbers {
+    flex-shrink: 0;
+    width: 44px;
+    padding: 14px 0;
+    background: var(--surface-2);
+    border-right: 1px solid var(--border-dim);
+    text-align: right;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  .line-num {
+    display: block;
+    padding: 0 10px;
+    font-family: var(--mn);
+    font-size: 12px;
+    color: var(--text-dim);
+    line-height: 1.65;
+  }
+
+  .line-num.active {
+    color: var(--text-mid);
+  }
+
+  .code-editor {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    color: var(--text-code);
+    font-family: var(--mn);
+    font-size: 13px;
+    line-height: 1.65;
+    outline: none;
+    overflow: hidden;
+  }
+
+  .code-editor::selection {
+    background: rgba(123, 47, 255, 0.3);
+  }
+
+  .code-editor-fallback {
+    display: none;
+    padding: 14px 16px;
+    resize: none;
+    overflow-y: auto;
+    tab-size: 4;
+    white-space: pre;
+    caret-color: var(--cyan);
+  }
+
+  #codeEditor .ace_gutter {
+    background: var(--surface-2);
+    color: var(--text-dim);
+    border-right: 1px solid var(--border-dim);
+  }
+
+  #codeEditor .ace_print-margin {
+    width: 0 !important;
+  }
+
+  /* Bottom utility bar */
+  .exec-bottombar {
+    flex-shrink: 0;
+    height: 44px;
+    background: var(--surface-2);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 12px;
+  }
+
+  .custom-input-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+  }
+
+  .custom-cb {
+    width: 13px;
+    height: 13px;
+    border: 1px solid var(--border-bright);
+    background: var(--surface-4);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    color: var(--cyan);
+    cursor: pointer;
+    /* sharp square — no clip-path needed at this size */
+  }
+
+  .custom-cb.checked::after {
+    content: '✓';
+  }
+
+  .custom-input-label {
+    font-family: var(--mn);
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    transition: color 0.1s;
+  }
+
+  .custom-input-toggle:hover .custom-input-label {
+    color: var(--text-mid);
+  }
+
+  .exec-bottombar-spacer {
+    flex: 1;
+  }
+
+  /* Action buttons */
+  .btn-run,
+  .btn-submit {
+    font-family: var(--mn);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    padding: 7px 18px;
+    border: 1px solid;
+    cursor: pointer;
+    clip-path: var(--clip-oct);
+    transition: background 0.1s, color 0.1s, box-shadow 0.1s;
+    white-space: nowrap;
+  }
+
+  .btn-run {
+    color: var(--cyan);
+    background: transparent;
+    border-color: rgba(0, 229, 204, 0.45);
+  }
+
+  .btn-run:hover {
+    background: rgba(0, 229, 204, 0.08);
+    border-color: var(--cyan);
+  }
+
+  .btn-submit {
+    color: #000;
+    background: var(--cyan);
+    border-color: var(--cyan);
+    font-weight: 700;
+  }
+
+  .btn-submit:hover {
+    background: var(--cyan-text);
+    border-color: var(--cyan-text);
+    box-shadow: 0 0 20px rgba(0, 229, 204, 0.25);
+  }
+
+  .btn-submit:active {
+    box-shadow: none;
+    transform: scale(0.99);
+  }
+
+  /* Custom input textarea */
+  .custom-input-area {
+    flex-shrink: 0;
+    display: none;
+    flex-direction: column;
+    border-top: 1px solid var(--border);
+    background: var(--surface-4);
+  }
+
+  .custom-input-area.visible {
+    display: flex;
+  }
+
+  .custom-input-header {
+    padding: 7px 14px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    font-family: var(--px);
+    font-size: 6.5px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+
+  .custom-textarea {
+    flex: 1;
+    min-height: 70px;
+    max-height: 120px;
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    color: var(--text-code);
+    font-family: var(--mn);
+    font-size: 12.5px;
+    line-height: 1.6;
+    resize: vertical;
+    outline: none;
+    caret-color: var(--cyan);
+  }
+
+  /* ── Result Terminal shell ── */
+  .result-terminal {
+    flex-shrink: 0;
+    display: none;
+    flex-direction: column;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    /* Resizable: user can drag it taller */
+    min-height: 180px;
+    max-height: 55vh;
+    resize: vertical;
+    overflow: hidden;
+  }
+
+  .result-terminal.visible {
+    display: flex;
+  }
+
+  /* Chrome bar at top of terminal */
+  .result-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 14px;
+    height: 36px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    user-select: none;
+  }
+
+  .result-header-label {
+    font-family: var(--px);
+    font-size: 6.5px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .result-header-summary {
+    font-family: var(--mn);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+
+  .result-header-summary.pass {
+    color: var(--green);
+  }
+
+  .result-header-summary.fail {
+    color: var(--red);
+  }
+
+  .result-header-summary.run {
+    color: var(--cyan);
+  }
+
+  .result-spacer {
+    flex: 1;
+  }
+
+  /* Inner sub-tabs: [ CASES ] [ OUTPUT ] [ DIFF ] */
+  .result-subtabs {
+    display: flex;
+    align-items: stretch;
+    height: 100%;
+    gap: 1px;
+  }
+
+  .result-subtab {
+    font-family: var(--mn);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    padding: 0 13px;
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.1s, border-color 0.1s;
+    position: relative;
+    top: 1px;
+    white-space: nowrap;
+  }
+
+  .result-subtab:hover {
+    color: var(--text-mid);
+  }
+
+  .result-subtab.active {
+    color: var(--cyan);
+    border-bottom-color: var(--cyan);
+  }
+
+  .result-collapse-btn {
+    font-family: var(--mn);
+    font-size: 12px;
+    color: var(--text-dim);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color 0.1s;
+    flex-shrink: 0;
+  }
+
+  .result-collapse-btn:hover {
+    color: var(--red);
+  }
+
+  /* Sub-panel switcher */
+  .result-panels {
+    flex: 1;
+    min-height: 0;
+    position: relative;
+  }
+
+  .result-panel {
+    display: none;
+    height: 100%;
     overflow-y: auto;
   }
-  .briefing { flex: none; height: 55vh; border-right: none; border-bottom: 1px solid var(--border); }
-  .execution { flex: none; height: 60vh; }
-  .header-timer { display: none; }
-}
-@media (max-width: 640px) {
-  .page-header { padding: 0 14px; gap: 12px; }
-  .header-meta { display: none; }
-  .tab-bar { padding: 0 14px; }
-  .briefing-scroll { padding: 16px 16px 24px; }
-  .exec-topbar, .exec-bottombar { padding: 0 10px; }
-}
+
+  .result-panel.active {
+    display: block;
+  }
+
+  /* ── CASES sub-panel ── */
+  .result-body {
+    padding: 8px 14px 12px;
+  }
+
+  .result-row {
+    display: grid;
+    grid-template-columns: 110px 100px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border-dim);
+    font-family: var(--mn);
+    font-size: 11.5px;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: background 0.08s;
+  }
+
+  .result-row:last-child {
+    border-bottom: none;
+  }
+
+  .result-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .result-row.active-case {
+    background: rgba(0, 229, 204, 0.04);
+  }
+
+  .result-row.row-pass {
+    border-left-color: var(--green);
+  }
+
+  .result-row.row-fail {
+    border-left-color: var(--red);
+  }
+
+  .result-row.row-tle {
+    border-left-color: var(--yellow);
+  }
+
+  .result-case-id {
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    font-size: 10.5px;
+  }
+
+  .result-status {
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    font-size: 9.5px;
+    padding: 2px 8px;
+    clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
+    display: inline-block;
+  }
+
+  .rs-pass {
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid rgba(45, 255, 138, 0.3);
+  }
+
+  .rs-fail {
+    color: var(--red);
+    background: var(--red-dim);
+    border: 1px solid rgba(255, 64, 96, 0.3);
+  }
+
+  .rs-tle {
+    color: var(--yellow);
+    background: var(--yellow-dim);
+    border: 1px solid rgba(240, 192, 64, 0.3);
+  }
+
+  .result-detail {
+    color: var(--text-dim);
+    font-size: 10.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .result-time {
+    color: var(--text-dim);
+    font-size: 10px;
+    letter-spacing: 1px;
+    white-space: nowrap;
+    text-align: right;
+  }
+
+  /* Row expand arrow */
+  .row-expand-hint {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    white-space: nowrap;
+  }
+
+  /* ── OUTPUT sub-panel ── */
+  .output-panel-wrap {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  /* When custom input mode: side-by-side INPUT / OUTPUT */
+  .output-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex: 1;
+    min-height: 0;
+    border-top: 1px solid var(--border-dim);
+  }
+
+  .output-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .output-col:first-child {
+    border-right: 1px solid var(--border-dim);
+  }
+
+  .output-col-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border-dim);
+  }
+
+  .output-col-label {
+    font-family: var(--mn);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .output-col-meta {
+    font-family: var(--mn);
+    font-size: 9px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+
+  .output-col-meta.ok {
+    color: var(--green);
+  }
+
+  .output-col-meta.bad {
+    color: var(--red);
+  }
+
+  .output-pre {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 14px;
+    font-family: var(--mn);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--text-code);
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: var(--bg);
+    margin: 0;
+  }
+
+  .output-pre.stdout {
+    color: var(--text-code);
+  }
+
+  .output-pre.stdin {
+    color: var(--text-mid);
+  }
+
+  .output-pre.stderr {
+    color: var(--red);
+  }
+
+  .output-pre.empty {
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  /* Custom-mode single column full output */
+  .output-single {
+    flex: 1;
+    min-height: 0;
+    border-top: 1px solid var(--border-dim);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── DIFF sub-panel ── */
+  .diff-panel-wrap {
+    padding: 10px 14px;
+    height: 100%;
+    overflow-y: auto;
+  }
+
+  .diff-legend {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 10px;
+  }
+
+  .diff-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mn);
+    font-size: 9.5px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+  }
+
+  .diff-dot {
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+  }
+
+  .diff-dot.match {
+    background: rgba(45, 255, 138, 0.3);
+  }
+
+  .diff-dot.mismatch {
+    background: rgba(255, 64, 96, 0.3);
+  }
+
+  .diff-dot.missing {
+    background: rgba(240, 192, 64, 0.2);
+  }
+
+  .diff-grid {
+    display: grid;
+    grid-template-columns: 28px 1fr 1fr;
+    border: 1px solid var(--border-dim);
+    font-family: var(--mn);
+    font-size: 11.5px;
+    overflow: hidden;
+  }
+
+  .diff-grid-head {
+    display: contents;
+  }
+
+  .diff-grid-head>span {
+    padding: 6px 12px;
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+
+  .diff-line {
+    display: contents;
+  }
+
+  .diff-line>span {
+    padding: 4px 12px;
+    border-bottom: 1px solid var(--border-dim);
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .diff-line:last-child>span {
+    border-bottom: none;
+  }
+
+  .diff-line>span:first-child {
+    color: var(--text-dim);
+    font-size: 10px;
+    text-align: right;
+    padding-right: 8px;
+    background: var(--surface-2);
+    border-right: 1px solid var(--border-dim);
+  }
+
+  /* Match row */
+  .diff-line.match>span:not(:first-child) {
+    color: var(--text-code);
+    background: transparent;
+  }
+
+  /* Mismatch row */
+  .diff-line.mismatch>span:nth-child(2) {
+    color: var(--red);
+    background: rgba(255, 64, 96, 0.07);
+  }
+
+  .diff-line.mismatch>span:nth-child(3) {
+    color: var(--green);
+    background: rgba(45, 255, 138, 0.07);
+  }
+
+  /* Missing row */
+  .diff-line.missing>span:nth-child(2) {
+    color: var(--text-dim);
+    font-style: italic;
+  }
+
+  .diff-line.missing>span:nth-child(3) {
+    color: var(--yellow);
+    background: rgba(240, 192, 64, 0.07);
+  }
+
+  /* No-diff notice */
+  .diff-perfect {
+    padding: 20px 14px;
+    font-family: var(--mn);
+    font-size: 11px;
+    color: var(--green);
+    letter-spacing: 1.5px;
+  }
+
+  .diff-na {
+    padding: 20px 14px;
+    font-family: var(--mn);
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 1.5px;
+  }
+
+
+  /* ═══════════════════════════════════════
+   SUBMISSIONS TAB
+═══════════════════════════════════════ */
+  #panel-submissions {
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .submissions-header {
+    flex-shrink: 0;
+    padding: 20px 28px 14px;
+    border-bottom: 1px solid var(--border-dim);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .submissions-title {
+    font-family: var(--px);
+    font-size: 8px;
+    letter-spacing: 2px;
+    color: var(--cyan);
+  }
+
+  .submissions-count {
+    font-family: var(--mn);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    color: var(--text-dim);
+  }
+
+  .submissions-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 28px 28px;
+  }
+
+  /* Submissions table */
+  .sub-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+  }
+
+  .sub-table thead tr {
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sub-table thead th {
+    font-family: var(--mn);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    padding: 9px 14px;
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  .sub-table thead th:last-child {
+    text-align: right;
+  }
+
+  .sub-table tbody tr {
+    border-bottom: 1px solid var(--border-dim);
+    transition: background 0.08s;
+  }
+
+  .sub-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .sub-table tbody tr:last-child {
+    border-bottom: none;
+  }
+
+  .sub-table tbody td {
+    font-family: var(--mn);
+    font-size: 11.5px;
+    color: var(--text);
+    padding: 10px 14px;
+    vertical-align: middle;
+  }
+
+  .sub-ts {
+    color: var(--text-mid) !important;
+    font-size: 10.5px !important;
+    white-space: nowrap;
+  }
+
+  .sub-lang {
+    color: var(--purple-text) !important;
+    letter-spacing: 0.5px;
+  }
+
+  .sub-status-cell {
+    white-space: nowrap;
+  }
+
+  .sub-status {
+    font-family: var(--mn);
+    font-size: 9.5px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    padding: 2px 8px;
+    clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px));
+  }
+
+  .sub-ac {
+    color: var(--green);
+    background: var(--green-dim);
+    border: 1px solid rgba(45, 255, 138, 0.3);
+  }
+
+  .sub-wa {
+    color: var(--red);
+    background: var(--red-dim);
+    border: 1px solid rgba(255, 64, 96, 0.3);
+  }
+
+  .sub-tle {
+    color: var(--yellow);
+    background: var(--yellow-dim);
+    border: 1px solid rgba(240, 192, 64, 0.3);
+  }
+
+  .sub-ce {
+    color: var(--text-mid);
+    background: var(--surface-3);
+    border: 1px solid var(--border);
+  }
+
+  .sub-score {
+    text-align: right;
+    font-weight: 600 !important;
+    letter-spacing: 1px;
+  }
+
+  .sub-score.full {
+    color: var(--cyan) !important;
+  }
+
+  .sub-score.partial {
+    color: var(--yellow) !important;
+  }
+
+  .sub-score.zero {
+    color: var(--text-dim) !important;
+  }
+
+  /* Empty state */
+  .sub-empty {
+    text-align: center;
+    padding: 48px 20px;
+  }
+
+  .sub-empty-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+    opacity: 0.3;
+  }
+
+  .sub-empty-text {
+    font-family: var(--mn);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+
+  /* Re-submit button in table */
+  .btn-view-sub {
+    font-family: var(--mn);
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    padding: 4px 10px;
+    color: var(--text-dim);
+    background: transparent;
+    border: 1px solid var(--border);
+    clip-path: var(--clip-sm);
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    transition: color 0.1s, border-color 0.1s;
+  }
+
+  .btn-view-sub:hover {
+    color: var(--cyan);
+    border-color: var(--cyan-mid);
+  }
+
+
+  /* ═══════════════════════════════════════
+   LOADING OVERLAY (Run / Submit)
+═══════════════════════════════════════ */
+  .run-overlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(10, 10, 15, 0.7);
+    z-index: 50;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .run-overlay.active {
+    display: flex;
+  }
+
+  .run-spinner {
+    font-family: var(--mn);
+    font-size: 13px;
+    color: var(--cyan);
+    letter-spacing: 3px;
+    animation: spin-dots 1.2s steps(4) infinite;
+  }
+
+  @keyframes spin-dots {
+    0% {
+      content: '';
+    }
+
+    25% {
+      opacity: .6;
+    }
+
+    50% {
+      opacity: .4;
+    }
+
+    75% {
+      opacity: .2;
+    }
+
+    100% {
+      opacity: 1;
+    }
+  }
+
+  .run-msg {
+    font-family: var(--px);
+    font-size: 7px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+
+
+  /* Phase C Enhancements */
+  .glow-ac {
+    box-shadow: 0 0 10px var(--cyan), inset 0 0 10px var(--cyan);
+    border-color: var(--cyan) !important;
+    color: var(--cyan) !important;
+  }
+
+  @keyframes fadeInRow {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+      background-color: rgba(0, 255, 255, 0.2);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+      background-color: transparent;
+    }
+  }
+
+  .fade-in-row {
+    animation: fadeInRow 0.8s ease-out forwards;
+  }
+
+  /* ═══════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════ */
+  @media (max-width: 900px) {
+    #panel-problem {
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    .briefing {
+      flex: none;
+      height: 55vh;
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .execution {
+      flex: none;
+      height: 60vh;
+    }
+
+    .header-timer {
+      display: none;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .page-header {
+      padding: 0 14px;
+      gap: 12px;
+    }
+
+    .header-meta {
+      display: none;
+    }
+
+    .tab-bar {
+      padding: 0 14px;
+    }
+
+    .briefing-scroll {
+      padding: 16px 16px 24px;
+    }
+
+    .exec-topbar,
+    .exec-bottombar {
+      padding: 0 10px;
+    }
+  }
 </style>
 {% endblock %}
 
@@ -1024,9 +1667,13 @@ main {
   <div class="header-spacer"></div>
 
   <div class="header-meta">
-    <span class="meta-badge badge-diff">{% if contest_problem.difficulty == 'MEDIUM' %}MED{% else %}{{ contest_problem.difficulty|default:"EASY" }}{% endif %}</span>
+    <span class="meta-badge badge-diff">{% if contest_problem.difficulty == 'MEDIUM' %}MED{% else
+      %}{{ contest_problem.difficulty|default:"EASY" }}{% endif %}
+    </span>
     <span class="meta-badge badge-pts">{{ contest_problem.points }} PTS</span>
-    <span class="meta-badge badge-status {% if contest_status == 'UPCOMING' %}badge-status-upcoming{% elif contest_status == 'ENDED' %}badge-status-ended{% endif %}">● {{ contest_status }}</span>
+    <span
+      class="meta-badge badge-status {% if contest_status == 'UPCOMING' %}badge-status-upcoming{% elif contest_status == 'ENDED' %}badge-status-ended{% endif %}">●
+      {{ contest_status }}</span>
   </div>
 
   <div class="header-timer" id="pageTimer">02:14:55</div>
@@ -1037,10 +1684,10 @@ main {
      TAB BAR
 ═════════════════════════════════════════ -->
 <div class="tab-bar" role="tablist">
-  <button class="tab-btn active" data-tab="problem"      role="tab" aria-selected="true">
+  <button class="tab-btn active" data-tab="problem" role="tab" aria-selected="true">
     [ 01. PROBLEM ]
   </button>
-  <button class="tab-btn"        data-tab="submissions"  role="tab" aria-selected="false">
+  <button class="tab-btn" data-tab="submissions" role="tab" aria-selected="false">
     [ 02. SUBMISSIONS ]
   </button>
   <div class="tab-spacer"></div>
@@ -1084,11 +1731,11 @@ main {
           <div class="section-label">Constraints</div>
           <ul class="constraint-list">
             {% if constraint_lines %}
-              {% for constraint in constraint_lines %}
-                <li>{{ constraint }}</li>
-              {% endfor %}
+            {% for constraint in constraint_lines %}
+            <li>{{ constraint }}</li>
+            {% endfor %}
             {% else %}
-              <li>No constraints provided.</li>
+            <li>No constraints provided.</li>
             {% endif %}
           </ul>
         </div>
@@ -1103,36 +1750,41 @@ main {
         <div class="briefing-section">
           <div class="section-label">Sample Cases</div>
           {% if sample_cases %}
-            {% for sample in sample_cases %}
-              <div class="sample-block">
-                <div class="sample-header">
-                  <span class="sample-id">// SAMPLE_{{ forloop.counter|stringformat:"02d" }}</span>
-                  <button class="sample-copy-btn" onclick="copyToEditor('{{ sample.input_data|default_if_none:''|escapejs }}', this)">USE INPUT_</button>
-                </div>
-                <div class="sample-io">
-                  <div class="sample-col">
-                    <div class="sample-col-label">Input</div>
-                    <pre class="sample-code">{{ sample.input_data|default_if_none:'' }}</pre>
-                  </div>
-                  <div class="sample-col">
-                    <div class="sample-col-label">Output</div>
-                    <pre class="sample-code">{{ sample.expected_output|default_if_none:'' }}</pre>
-                  </div>
-                </div>
-                <div class="sample-explanation">
-                  <div class="sample-explanation-label">Explanation</div>
-                  <p class="sample-explanation-text">
-                    {% if sample.explanation %}
-                      {{ sample.explanation|linebreaksbr }}
-                    {% else %}
-                      No explanation provided.
-                    {% endif %}
-                  </p>
-                </div>
+          {% for sample in sample_cases %}
+          <div class="sample-block">
+            <div class="sample-header">
+              <span class="sample-id">// SAMPLE_{{ forloop.counter|stringformat:"02d" }}</span>
+              {% if sample.input_data %}
+              <button class="sample-copy-btn" onclick="copyToEditor('{{ sample.input_data|escapejs }}', this)">USE
+                INPUT_</button>
+              {% else %}
+              <button class="sample-copy-btn" onclick="copyToEditor('', this)">USE INPUT_</button>
+              {% endif %}
+            </div>
+            <div class="sample-io">
+              <div class="sample-col">
+                <div class="sample-col-label">Input</div>
+                <pre class="sample-code">{{ sample.input_data|default_if_none:'' }}</pre>
               </div>
-            {% endfor %}
+              <div class="sample-col">
+                <div class="sample-col-label">Output</div>
+                <pre class="sample-code">{{ sample.expected_output|default_if_none:'' }}</pre>
+              </div>
+            </div>
+            <div class="sample-explanation">
+              <div class="sample-explanation-label">Explanation</div>
+              <p class="sample-explanation-text">
+                {% if sample.explanation %}
+                {{ sample.explanation|linebreaksbr }}
+                {% else %}
+                No explanation provided.
+                {% endif %}
+              </p>
+            </div>
+          </div>
+          {% endfor %}
           {% else %}
-            <p class="problem-text">No sample cases available for this problem.</p>
+          <p class="problem-text">No sample cases available for this problem.</p>
           {% endif %}
         </div>
 
@@ -1254,9 +1906,9 @@ main {
       <div class="exec-topbar">
         <select class="lang-select" id="langSelect">
           {% for lang in allowed_languages %}
-            <option value="{{ lang.slug }}" data-id="{{ lang.id }}" data-ace-mode="{{ lang.ace_mode }}">{{ lang.name }}</option>
+          <option value="{{ lang.slug }}" data-ace-mode="{{ lang.ace_mode }}">{{ lang.name }}</option>
           {% empty %}
-            <option value="plain" data-ace-mode="text">Plain Text</option>
+          <option value="plain" data-ace-mode="text">Plain Text</option>
           {% endfor %}
         </select>
 
@@ -1273,7 +1925,8 @@ main {
       <!-- Code editor -->
       <div class="editor-area">
         <div class="code-editor" id="codeEditor"></div>
-        <textarea class="code-editor code-editor-fallback" id="codeEditorFallback" spellcheck="false" autocorrect="off" autocapitalize="off" placeholder="# Write your solution here..."></textarea>
+        <textarea class="code-editor code-editor-fallback" id="codeEditorFallback" spellcheck="false" autocorrect="off"
+          autocapitalize="off" placeholder="# Write your solution here..."></textarea>
       </div>
 
       <!-- Custom input area (conditionally shown) -->
@@ -1291,22 +1944,93 @@ main {
 
         <div class="exec-bottombar-spacer"></div>
 
-        <button class="btn-run"    id="btnRun"    onclick="runCode()">RUN CODE</button>
+        <button class="btn-run" id="btnRun" onclick="runCode()">RUN CODE</button>
         <button class="btn-submit" id="btnSubmit" onclick="submitCode()">SUBMIT</button>
       </div>
 
-      <!-- Result terminal -->
+      <!-- Result terminal — tabbed: CASES / OUTPUT / DIFF -->
       <div class="result-terminal" id="resultTerminal">
-        <div class="result-header" onclick="collapseResult()">
+
+        <!-- Chrome bar -->
+        <div class="result-header">
           <span class="result-header-label">// EXECUTION_OUTPUT</span>
           <span class="result-header-summary" id="resultSummary"></span>
           <div class="result-spacer"></div>
-          <span class="result-collapse">✕</span>
+          <!-- Sub-tabs -->
+          <div class="result-subtabs">
+            <button class="result-subtab active" data-rtab="cases" onclick="switchResultTab('cases')">CASES</button>
+            <button class="result-subtab" data-rtab="output" onclick="switchResultTab('output')">OUTPUT</button>
+            <button class="result-subtab" data-rtab="diff" onclick="switchResultTab('diff')">DIFF</button>
+          </div>
+          <div class="result-spacer" style="max-width:12px;"></div>
+          <button class="result-collapse-btn" onclick="collapseResult()" title="Close">✕</button>
         </div>
-        <div class="result-body" id="resultBody">
-          <!-- Result rows injected by JS -->
-        </div>
-      </div>
+
+        <!-- Sub-panel container -->
+        <div class="result-panels">
+
+          <!-- ── CASES panel ── -->
+          <div class="result-panel active" id="rpanel-cases">
+            <div class="result-body" id="resultBody">
+              <!-- Rows injected by JS -->
+            </div>
+          </div>
+
+          <!-- ── OUTPUT panel ── -->
+          <div class="result-panel" id="rpanel-output">
+            <div class="output-panel-wrap">
+
+              <!-- Custom input mode: INPUT left / OUTPUT right -->
+              <div class="output-split" id="outputSplit">
+                <div class="output-col">
+                  <div class="output-col-header">
+                    <span class="output-col-label">Your Input</span>
+                    <span class="output-col-meta" id="inputMeta"></span>
+                  </div>
+                  <pre class="output-pre stdin" id="outputStdin">—</pre>
+                </div>
+                <div class="output-col">
+                  <div class="output-col-header">
+                    <span class="output-col-label">Your Output</span>
+                    <span class="output-col-meta" id="outputMeta"></span>
+                  </div>
+                  <pre class="output-pre stdout" id="outputStdout">—</pre>
+                </div>
+              </div>
+
+              <!-- Stderr row (always full-width, hidden when empty) -->
+              <div class="output-single" id="stderrWrap" style="display:none; max-height:80px;">
+                <div class="output-col-header">
+                  <span class="output-col-label" style="color:var(--red);">Stderr / Runtime Error</span>
+                </div>
+                <pre class="output-pre stderr" id="outputStderr"></pre>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- ── DIFF panel ── -->
+          <div class="result-panel" id="rpanel-diff">
+            <div class="diff-panel-wrap">
+              <div class="diff-legend">
+                <div class="diff-legend-item">
+                  <div class="diff-dot match"></div>Match
+                </div>
+                <div class="diff-legend-item">
+                  <div class="diff-dot mismatch"></div>Mismatch
+                </div>
+                <div class="diff-legend-item">
+                  <div class="diff-dot missing"></div>Extra / Missing
+                </div>
+              </div>
+              <div class="diff-grid" id="diffGrid">
+                <!-- rows injected by JS -->
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /result-panels -->
+      </div><!-- /result-terminal -->
 
       <!-- Run loading overlay -->
       <div class="run-overlay" id="runOverlay">
@@ -1415,434 +2139,512 @@ main {
 {% block extra_js %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.33.0/ace.js" referrerpolicy="no-referrer"></script>
 <script>
-(function () {
-"use strict";
+  (function () {
+    "use strict";
 
-/* ══════════════════════════════════════════
-   EDITOR — Line numbers + sync
-══════════════════════════════════════════ */
-const langSel = document.getElementById('langSelect');
-const fallbackEditor = document.getElementById('codeEditorFallback');
-const aceEditor = (window.ace && document.getElementById('codeEditor')) ? ace.edit('codeEditor') : null;
+    /* ══════════════════════════════════════════
+       EDITOR — Line numbers + sync
+    ══════════════════════════════════════════ */
+    const langSel = document.getElementById('langSelect');
+    const fallbackEditor = document.getElementById('codeEditorFallback');
+    const aceEditor = (window.ace && document.getElementById('codeEditor')) ? ace.edit('codeEditor') : null;
 
-if (aceEditor) {
-  aceEditor.setTheme('ace/theme/monokai');
-  aceEditor.setOptions({
-    fontFamily: "'JetBrains Mono', monospace",
-    fontSize: "13px",
-    showPrintMargin: false,
-    tabSize: 4,
-    useSoftTabs: true,
-    wrap: false,
-  });
-} else if (fallbackEditor) {
-  const aceHost = document.getElementById('codeEditor');
-  if (aceHost) aceHost.style.display = 'none';
-  fallbackEditor.style.display = 'block';
-  fallbackEditor.addEventListener('keydown', function (e) {
-    if (e.key === 'Tab') {
-      e.preventDefault();
-      const s = fallbackEditor.selectionStart;
-      const v = fallbackEditor.value;
-      fallbackEditor.value = v.substring(0, s) + '    ' + v.substring(fallbackEditor.selectionEnd);
-      fallbackEditor.selectionStart = fallbackEditor.selectionEnd = s + 4;
-    }
-  });
-}
-
-function selectedAceMode() {
-  const selected = langSel.options[langSel.selectedIndex];
-  return selected ? (selected.dataset.aceMode || 'text').toLowerCase() : 'text';
-}
-
-function applyAceMode() {
-  if (!aceEditor) return;
-  aceEditor.session.setMode(`ace/mode/${selectedAceMode()}`);
-}
-
-function getEditorValue() {
-  if (aceEditor) return aceEditor.getValue();
-  return fallbackEditor ? fallbackEditor.value : '';
-}
-
-function setEditorValue(text) {
-  if (aceEditor) {
-    aceEditor.setValue(text, -1);
-    return;
-  }
-  if (fallbackEditor) fallbackEditor.value = text;
-}
-
-// Parse the injected JSON
-let dbStubs = {};
-try {
-  const dbStubsRaw = `{{ code_stubs_json|escapejs }}`;
-  if (dbStubsRaw && dbStubsRaw !== '{}') {
-    dbStubs = JSON.parse(dbStubsRaw);
-  }
-} catch(e) {
-  console.error("Failed to parse DB code stubs", e);
-}
-
-function loadStub() {
-  const slug = (langSel.value || '').toLowerCase();
-  
-  if (dbStubs[slug]) {
-    setEditorValue(dbStubs[slug]);
-  } else {
-    // Default to comment
-    const mode = selectedAceMode();
-    let defaultComment = '// Write your code here\n';
-    if (mode === 'python' || mode === 'ruby') {
-      defaultComment = '# Write your code here\n';
-    }
-    setEditorValue(defaultComment);
-  }
-  
-  applyAceMode();
-}
-
-langSel.addEventListener('change', loadStub);
-if (langSel.options.length > 0) {
-  loadStub();
-}
-
-
-/* ══════════════════════════════════════════
-   RESET CODE
-══════════════════════════════════════════ */
-function resetCode() {
-  if (confirm('Reset code to default stub?')) {
-    loadStub();
-  }
-}
-window.resetCode = resetCode;
-
-
-/* ══════════════════════════════════════════
-   EXPAND EDITOR (hide briefing)
-══════════════════════════════════════════ */
-let expanded = false;
-function toggleExpand() {
-  const briefing  = document.querySelector('.briefing');
-  const btn       = document.getElementById('expandBtn');
-  expanded = !expanded;
-  briefing.style.display = expanded ? 'none' : '';
-  btn.textContent = expanded ? '⤡' : '⤢';
-}
-window.toggleExpand = toggleExpand;
-
-
-/* ══════════════════════════════════════════
-   CUSTOM INPUT TOGGLE
-══════════════════════════════════════════ */
-let customOn = false;
-function toggleCustomInput() {
-  customOn = !customOn;
-  const cb    = document.getElementById('customCb');
-  const area  = document.getElementById('customInputArea');
-  const label = document.querySelector('.custom-input-label');
-  cb.classList.toggle('checked', customOn);
-  area.classList.toggle('visible', customOn);
-  label.textContent = customOn ? '[✓] Test against custom input' : '[ ] Test against custom input';
-}
-window.toggleCustomInput = toggleCustomInput;
-
-
-/* ══════════════════════════════════════════
-   COPY SAMPLE TO CUSTOM INPUT
-══════════════════════════════════════════ */
-function copyToEditor(inputText, btn) {
-  if (!customOn) toggleCustomInput();
-  document.getElementById('customInput').value = inputText;
-  const orig = btn.textContent;
-  btn.textContent = 'COPIED ✓';
-  btn.style.color = 'var(--cyan)';
-  setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1400);
-}
-window.copyToEditor = copyToEditor;
-
-
-/* ══════════════════════════════════════════
-   RUN CODE — simulated
-══════════════════════════════════════════ */
-function showOverlay(msg) {
-  const ov = document.getElementById('runOverlay');
-  document.getElementById('runMsg').textContent = msg;
-  ov.classList.add('active');
-}
-function hideOverlay() {
-  document.getElementById('runOverlay').classList.remove('active');
-}
-
-const SAMPLE_RESULTS = {
-  run: [
-    { id: '01', status: 'pass',  label: 'PASSED',       detail: '',                  time: '0.18s' },
-    { id: '02', status: 'pass',  label: 'PASSED',       detail: '',                  time: '0.21s' },
-  ],
-  submit: [
-    { id: '01', status: 'pass',  label: 'PASSED',       detail: '',                  time: '0.18s' },
-    { id: '02', status: 'pass',  label: 'PASSED',       detail: '',                  time: '0.21s' },
-    { id: '03', status: 'fail',  label: 'WRONG ANSWER', detail: 'Expected: 9 8 7 6', time: '0.19s' },
-    { id: '04', status: 'pass',  label: 'PASSED',       detail: '',                  time: '0.22s' },
-    { id: '05', status: 'tle',   label: 'TIME LIMIT',   detail: 'Exceeded 1.0s',     time: '1.01s' },
-  ],
-};
-
-function buildResultRows(rows) {
-  const body = document.getElementById('resultBody');
-  body.innerHTML = '';
-  rows.forEach(r => {
-    const cls   = r.status === 'pass' ? 'rs-pass' : r.status === 'tle' ? 'rs-tle' : 'rs-fail';
-    const row   = document.createElement('div');
-    row.className = 'result-row';
-    row.innerHTML = `
-      <span class="result-case-id">Test Case #${r.id}</span>
-      <span class="result-status ${cls}">${r.label}</span>
-      ${r.detail ? `<span class="result-detail">${r.detail}</span>` : ''}
-      <span class="result-time">${r.time}</span>
-    `;
-    body.appendChild(row);
-  });
-}
-
-function showResultTerminal(rows, type) {
-  const terminal  = document.getElementById('resultTerminal');
-  const summary   = document.getElementById('resultSummary');
-  terminal.classList.add('visible');
-
-  const passed = rows.filter(r => r.status === 'pass').length;
-  const total  = rows.length;
-  const allOk  = passed === total;
-
-  if (type === 'run') {
-    summary.textContent = `${passed}/${total} PASSED`;
-    summary.className   = `result-header-summary ${allOk ? 'pass' : 'fail'}`;
-  } else {
-    summary.textContent = allOk ? 'ACCEPTED — ALL CLEAR' : `${passed}/${total} PASSED — CHECK FAILED CASES`;
-    summary.className   = `result-header-summary ${allOk ? 'pass' : 'fail'}`;
-  }
-  buildResultRows(rows);
-}
-
-function runCode() {
-  if (!getEditorValue().trim()) return;
-  showOverlay('EXECUTING...');
-  setTimeout(() => {
-    hideOverlay();
-    showResultTerminal(SAMPLE_RESULTS.run, 'run');
-  }, 1200);
-}
-
-function getCookie(name) {
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== '') {
-    const cookies = document.cookie.split(';');
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === (name + '=')) {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-}
-
-async function submitCode() {
-  const code = getEditorValue().trim();
-  if (!code) return;
-  const langOption = langSel.options[langSel.selectedIndex];
-  if (!langOption) return;
-  
-  const langId = langOption.dataset.id;
-  
-  showOverlay('QUEUING SUBMISSION...');
-  const csrftoken = getCookie('csrftoken');
-  
-  try {
-    const response = await fetch("{% url 'submit_code' contest.id problem.id %}", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': csrftoken
-      },
-      body: JSON.stringify({
-        code: code,
-        language_id: langId
-      })
-    });
-    
-    const data = await response.json();
-    hideOverlay();
-    
-    if (response.ok) {
-      // Start real-time polling
-      pollSubmissionStatus(data.submission_id);
-    } else {
-      alert(`Error: ${data.error || 'Submission failed'}`);
-    }
-  } catch (error) {
-    hideOverlay();
-    alert('Network error occurred during submission.');
-    console.error("Submission error:", error);
-  }
-}
-
-let pollingInterval = null;
-let pollCount = 0;
-
-async function pollSubmissionStatus(submissionId) {
-  if (pollingInterval) clearInterval(pollingInterval);
-  pollCount = 0;
-  
-  showOverlay('JUDGING IN PROGRESS...');
-  
-  pollingInterval = setInterval(async () => {
-    pollCount++;
-    if (pollCount >= 30) {
-      clearInterval(pollingInterval);
-      hideOverlay();
-      const terminal  = document.getElementById('resultTerminal');
-      const summary   = document.getElementById('resultSummary');
-      const body = document.getElementById('resultBody');
-      
-      terminal.classList.add('visible');
-      summary.classList.remove('glow-ac');
-      summary.textContent = 'SYSTEM TIMEOUT - PLEASE RETRY';
-      summary.className = 'result-header-summary fail';
-      body.innerHTML = '';
-      return;
+    if (aceEditor) {
+      aceEditor.setTheme('ace/theme/monokai');
+      aceEditor.setOptions({
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: "13px",
+        showPrintMargin: false,
+        tabSize: 4,
+        useSoftTabs: true,
+        wrap: false,
+      });
+    } else if (fallbackEditor) {
+      const aceHost = document.getElementById('codeEditor');
+      if (aceHost) aceHost.style.display = 'none';
+      fallbackEditor.style.display = 'block';
+      fallbackEditor.addEventListener('keydown', function (e) {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          const s = fallbackEditor.selectionStart;
+          const v = fallbackEditor.value;
+          fallbackEditor.value = v.substring(0, s) + '    ' + v.substring(fallbackEditor.selectionEnd);
+          fallbackEditor.selectionStart = fallbackEditor.selectionEnd = s + 4;
+        }
+      });
     }
 
-    try {
-      const response = await fetch(`/submission/${submissionId}/status/`);
-      if (!response.ok) {
-        clearInterval(pollingInterval);
-        hideOverlay();
+    function selectedAceMode() {
+      const selected = langSel.options[langSel.selectedIndex];
+      return selected ? (selected.dataset.aceMode || 'text').toLowerCase() : 'text';
+    }
+
+    function applyAceMode() {
+      if (!aceEditor) return;
+      aceEditor.session.setMode(`ace/mode/${selectedAceMode()}`);
+    }
+
+    function getEditorValue() {
+      if (aceEditor) return aceEditor.getValue();
+      return fallbackEditor ? fallbackEditor.value : '';
+    }
+
+    function setEditorValue(text) {
+      if (aceEditor) {
+        aceEditor.setValue(text, -1);
         return;
       }
-      
-      const data = await response.json();
-      
-      if (data.status !== 'PENDING') {
-        clearInterval(pollingInterval);
-        hideOverlay();
-        
-        const terminal  = document.getElementById('resultTerminal');
-        const summary   = document.getElementById('resultSummary');
-        const body = document.getElementById('resultBody');
-        
-        terminal.classList.add('visible');
-        
-        if (data.is_accepted) {
-          summary.textContent = `[ VERDICT: ACCEPTED | TIME: ${data.execution_time}s ]`;
-          summary.className = 'result-header-summary pass glow-ac';
-        } else {
-          summary.classList.remove('glow-ac');
-          summary.textContent = `[ VERDICT: ${data.status} | TIME: ${data.execution_time}s ]`;
-          summary.className = 'result-header-summary fail';
+      if (fallbackEditor) fallbackEditor.value = text;
+    }
+
+    // Parse the injected JSON
+    let dbStubs = {};
+    try {
+      const dbStubsRaw = `{{ code_stubs_json|escapejs }}`;
+      if (dbStubsRaw && dbStubsRaw !== '{}') {
+        dbStubs = JSON.parse(dbStubsRaw);
+      }
+    } catch (e) {
+      console.error("Failed to parse DB code stubs", e);
+    }
+
+    function loadStub() {
+      const slug = (langSel.value || '').toLowerCase();
+
+      if (dbStubs[slug]) {
+        setEditorValue(dbStubs[slug]);
+      } else {
+        // Default to comment
+        const mode = selectedAceMode();
+        let defaultComment = '// Write your code here\n';
+        if (mode === 'python' || mode === 'ruby') {
+          defaultComment = '# Write your code here\n';
         }
-        
-        body.innerHTML = '';
-        
-        if (data.status === 'RE' || data.status === 'CE') {
-          const errorMsg = document.createElement('pre');
-          errorMsg.style.color = 'var(--red)';
-          errorMsg.style.fontFamily = 'var(--px)';
-          errorMsg.style.fontSize = '12px';
-          errorMsg.style.whiteSpace = 'pre-wrap';
-          errorMsg.textContent = data.error_message || 'Unknown error occurred.';
-          body.appendChild(errorMsg);
-        } else {
-           const row = document.createElement('div');
-           row.className = 'result-row';
-           row.innerHTML = `<span class="result-status ${data.is_accepted ? 'rs-pass' : 'rs-fail'}">${data.status}</span>
-                            <span class="result-time">${data.execution_time}s</span>
-                            <span class="result-time">${data.memory_used}KB</span>`;
-           body.appendChild(row);
+        setEditorValue(defaultComment);
+      }
+
+      applyAceMode();
+    }
+
+    langSel.addEventListener('change', loadStub);
+    if (langSel.options.length > 0) {
+      loadStub();
+    }
+
+
+    /* ══════════════════════════════════════════
+       RESET CODE
+    ══════════════════════════════════════════ */
+    function resetCode() {
+      if (confirm('Reset code to default stub?')) {
+        loadStub();
+      }
+    }
+    window.resetCode = resetCode;
+
+
+    /* ══════════════════════════════════════════
+       EXPAND EDITOR (hide briefing)
+    ══════════════════════════════════════════ */
+    let expanded = false;
+    function toggleExpand() {
+      const briefing = document.querySelector('.briefing');
+      const btn = document.getElementById('expandBtn');
+      expanded = !expanded;
+      briefing.style.display = expanded ? 'none' : '';
+      btn.textContent = expanded ? '⤡' : '⤢';
+    }
+    window.toggleExpand = toggleExpand;
+
+
+    /* ══════════════════════════════════════════
+       CUSTOM INPUT TOGGLE
+    ══════════════════════════════════════════ */
+    let customOn = false;
+    function toggleCustomInput() {
+      customOn = !customOn;
+      const cb = document.getElementById('customCb');
+      const area = document.getElementById('customInputArea');
+      const label = document.querySelector('.custom-input-label');
+      cb.classList.toggle('checked', customOn);
+      area.classList.toggle('visible', customOn);
+      label.textContent = customOn ? '[✓] Test against custom input' : '[ ] Test against custom input';
+    }
+    window.toggleCustomInput = toggleCustomInput;
+
+
+    /* ══════════════════════════════════════════
+       COPY SAMPLE TO CUSTOM INPUT
+    ══════════════════════════════════════════ */
+    function copyToEditor(inputText, btn) {
+      if (!customOn) toggleCustomInput();
+      document.getElementById('customInput').value = inputText;
+      const orig = btn.textContent;
+      btn.textContent = 'COPIED ✓';
+      btn.style.color = 'var(--cyan)';
+      setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1400);
+    }
+    window.copyToEditor = copyToEditor;
+
+
+    /* ══════════════════════════════════════════
+       RUN CODE — simulated
+    ══════════════════════════════════════════ */
+    function showOverlay(msg) {
+      const ov = document.getElementById('runOverlay');
+      document.getElementById('runMsg').textContent = msg;
+      ov.classList.add('active');
+    }
+    function hideOverlay() {
+      document.getElementById('runOverlay').classList.remove('active');
+    }
+
+    /* ══════════════════════════════════════════
+       RESULT TERMINAL — sub-tab switching
+    ══════════════════════════════════════════ */
+    function switchResultTab(name) {
+      document.querySelectorAll('.result-subtab').forEach(b => {
+        b.classList.toggle('active', b.dataset.rtab === name);
+      });
+      document.querySelectorAll('.result-panel').forEach(p => {
+        p.classList.toggle('active', p.id === 'rpanel-' + name);
+      });
+    }
+    window.switchResultTab = switchResultTab;
+
+    /* ══════════════════════════════════════════
+       OUTPUT PANEL helpers
+    ══════════════════════════════════════════ */
+    function setOutputPanel(stdin, stdout, stderr, meta) {
+      // stdin column
+      const stdinEl = document.getElementById('outputStdin');
+      if (stdin !== null) {
+        stdinEl.textContent = stdin || '(empty)';
+        stdinEl.className = 'output-pre ' + (stdin ? 'stdin' : 'empty');
+        document.getElementById('inputMeta').textContent = stdin
+          ? `${stdin.split('\n').length} line(s)` : '';
+      } else {
+        stdinEl.textContent = '— (sample input)';
+        stdinEl.className = 'output-pre empty';
+        document.getElementById('inputMeta').textContent = '';
+      }
+
+      // stdout column
+      const stdoutEl = document.getElementById('outputStdout');
+      stdoutEl.textContent = stdout || '(no output)';
+      stdoutEl.className = stdout ? 'output-pre stdout' : 'output-pre empty';
+
+      const outMeta = document.getElementById('outputMeta');
+      if (meta) {
+        outMeta.textContent = meta.text;
+        outMeta.className = 'output-col-meta ' + (meta.ok ? 'ok' : 'bad');
+      } else {
+        outMeta.textContent = '';
+        outMeta.className = 'output-col-meta';
+      }
+
+      // stderr row
+      const stderrWrap = document.getElementById('stderrWrap');
+      const stderrEl = document.getElementById('outputStderr');
+      if (stderr) {
+        stderrWrap.style.display = 'flex';
+        stderrEl.textContent = stderr;
+      } else {
+        stderrWrap.style.display = 'none';
+      }
+    }
+
+    /* ══════════════════════════════════════════
+       DIFF PANEL helpers
+    ══════════════════════════════════════════ */
+    function buildDiff(yourOutput, expectedOutput) {
+      const grid = document.getElementById('diffGrid');
+      grid.innerHTML = '';
+
+      if (!yourOutput && !expectedOutput) {
+        grid.innerHTML = '<div class="diff-na">// No diff available for this run mode.</div>';
+        return;
+      }
+
+      const yours = (yourOutput || '').trimEnd().split('\n');
+      const expected = (expectedOutput || '').trimEnd().split('\n');
+      const maxLen = Math.max(yours.length, expected.length);
+
+      // Header row
+      const head = document.createElement('div');
+      head.className = 'diff-grid-head';
+      head.innerHTML = `<span>#</span><span>Your Output</span><span>Expected</span>`;
+      grid.appendChild(head);
+
+      let allMatch = true;
+
+      for (let i = 0; i < maxLen; i++) {
+        const y = yours[i] !== undefined ? yours[i] : null;
+        const e = expected[i] !== undefined ? expected[i] : null;
+
+        const match = y !== null && e !== null && y.trim() === e.trim();
+        const type = match ? 'match' : (y === null ? 'missing' : (e === null ? 'missing' : 'mismatch'));
+        if (!match) allMatch = false;
+
+        const row = document.createElement('div');
+        row.className = `diff-line ${type}`;
+        const lineNo = document.createElement('span'); lineNo.textContent = i + 1;
+        const yourCol = document.createElement('span'); yourCol.textContent = y !== null ? y : '(missing)';
+        const expCol = document.createElement('span'); expCol.textContent = e !== null ? e : '(missing)';
+        row.append(lineNo, yourCol, expCol);
+        grid.appendChild(row);
+      }
+
+      if (allMatch && maxLen > 0) {
+        const ok = document.createElement('div');
+        ok.className = 'diff-perfect';
+        ok.textContent = '✓ Output matches expected exactly.';
+        grid.prepend(ok);
+      }
+    }
+
+    /* ══════════════════════════════════════════
+       SIMULATED TEST RESULTS
+       In production: replace with API response data
+    ══════════════════════════════════════════ */
+
+    // Sample expected outputs keyed by case id
+    const EXPECTED_OUTPUTS = {
+      '01': '5 4 3 2 1',
+      '02': '2 4 -1 7 0 -3',
+      '03': '100',
+      '04': '9 8 7 6 5 4 3 2 1',
+      '05': '1000000000 999999999',
+    };
+
+    // Simulated judge results for RUN (sample cases only)
+    const RUN_RESULTS = [
+      { id: '01', status: 'pass', label: 'PASSED', stdout: '5 4 3 2 1', stderr: '', expected: '5 4 3 2 1', time: '0.18s' },
+      { id: '02', status: 'fail', label: 'WRONG ANSWER', stdout: '2 4 -1 7 0 -3 ', stderr: '', expected: '2 4 -1 7 0 -3', time: '0.21s' },
+    ];
+
+    // Simulated judge results for SUBMIT (all test cases)
+    const SUBMIT_RESULTS = [
+      { id: '01', status: 'pass', label: 'PASSED', stdout: '5 4 3 2 1', stderr: '', expected: '5 4 3 2 1', time: '0.18s' },
+      { id: '02', status: 'pass', label: 'PASSED', stdout: '2 4 -1 7 0 -3', stderr: '', expected: '2 4 -1 7 0 -3', time: '0.21s' },
+      { id: '03', status: 'fail', label: 'WRONG ANSWER', stdout: '0', stderr: '', expected: '100', time: '0.20s' },
+      { id: '04', status: 'pass', label: 'PASSED', stdout: '9 8 7 6 5 4 3 2 1', stderr: '', expected: '9 8 7 6 5 4 3 2 1', time: '0.22s' },
+      { id: '05', status: 'tle', label: 'TIME LIMIT', stdout: '', stderr: '', expected: '1000000000 999999999', time: '1.01s' },
+    ];
+
+    // Track which case row is selected in CASES tab
+    let activeResultCase = null;
+
+    function buildResultRows(rows) {
+      const body = document.getElementById('resultBody');
+      body.innerHTML = '';
+
+      rows.forEach((r, idx) => {
+        const clsMap = { pass: 'rs-pass', fail: 'rs-fail', tle: 'rs-tle' };
+        const rowClass = { pass: 'row-pass', fail: 'row-fail', tle: 'row-tle' }[r.status] || 'row-fail';
+        const detail = r.detail ? r.detail : (r.status === 'fail' ? `Expected: ${(r.expected || '').slice(0, 28)}${r.expected && r.expected.length > 28 ? '…' : ''}` :
+          r.status === 'tle' ? 'Execution timed out' : '');
+
+        const row = document.createElement('div');
+        row.className = `result-row ${rowClass}`;
+        row.dataset.idx = idx;
+        row.innerHTML = `
+      <span class="result-case-id">Test Case #${r.id}</span>
+      <span class="result-status ${clsMap[r.status] || 'rs-fail'}">${r.label}</span>
+      <span class="result-detail">${detail}</span>
+      <span class="result-time">${r.time}</span>
+    `;
+
+        // Click a row → jump to OUTPUT tab showing that case's stdout
+        row.addEventListener('click', () => {
+          document.querySelectorAll('.result-row').forEach(el => el.classList.remove('active-case'));
+          row.classList.add('active-case');
+          activeResultCase = r;
+
+          setOutputPanel(
+            null,                    // stdin: not shown for judge cases (hidden inputs)
+            r.stdout,
+            r.stderr,
+            { text: r.status === 'pass' ? '✓ Correct' : '✗ Wrong', ok: r.status === 'pass' }
+          );
+          buildDiff(r.stdout, r.expected);
+          switchResultTab('output');
+        });
+
+        body.appendChild(row);
+      });
+
+      // Auto-select first failed case if any
+      const firstFail = rows.find(r => r.status !== 'pass');
+      if (firstFail) {
+        setTimeout(() => {
+          const el = body.querySelector(`.result-row[data-idx="${rows.indexOf(firstFail)}"]`);
+          if (el) el.click();
+        }, 0);
+      }
+    }
+
+    function showResultTerminal(rows, type, customStdin) {
+      const terminal = document.getElementById('resultTerminal');
+      const summary = document.getElementById('resultSummary');
+      terminal.classList.add('visible');
+
+      const passed = rows.filter(r => r.status === 'pass').length;
+      const total = rows.length;
+      const allOk = passed === total;
+
+      summary.textContent = allOk
+        ? (type === 'submit' ? 'ACCEPTED' : `${passed}/${total} PASSED`)
+        : `${passed}/${total} PASSED`;
+      summary.className = `result-header-summary ${allOk ? 'pass' : 'fail'}`;
+
+      // If custom input mode, OUTPUT tab shows stdin/stdout directly
+      if (type === 'custom' && rows.length === 1) {
+        const r = rows[0];
+        setOutputPanel(
+          customStdin,
+          r.stdout,
+          r.stderr,
+          r.stdout ? { text: `${r.stdout.split('\n').length} line(s)`, ok: true } : null
+        );
+        buildDiff(r.stdout, null); // no expected for custom input
+        buildResultRows(rows);
+        switchResultTab('output'); // land on OUTPUT for custom runs
+      } else {
+        buildResultRows(rows);
+        // Clear output panel until a row is clicked
+        if (!document.querySelector('.result-row.active-case')) {
+          setOutputPanel(null, '', '', null);
+          buildDiff('', '');
         }
-        
-        const tbody = document.getElementById('subTableBody');
-        if (tbody) {
-          const tr = document.createElement('tr');
-          tr.className = 'fade-in-row';
-          const d = new Date();
-          const timeString = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
-          const langText = document.getElementById('langSelect').options[document.getElementById('langSelect').selectedIndex].text;
-          tr.innerHTML = `
-            <td>${timeString}</td>
-            <td>${langText}</td>
-            <td style="color: var(--${data.is_accepted ? 'cyan' : 'red'})">${data.status}</td>
-            <td>${data.execution_time}s</td>
-            <td>${data.memory_used} KB</td>
-            <td style="text-align:right;">--</td>
-            <td></td>
-          `;
-          tbody.prepend(tr);
-          
-          const countEl = document.getElementById('subCount');
-          if (countEl) {
-             const curr = parseInt(countEl.textContent) || 0;
-             countEl.textContent = \`\${curr + 1} submissions\`;
+      }
+    }
+
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
           }
         }
       }
-    } catch (err) {
-      console.error(err);
+      return cookieValue;
     }
-  }, 2000);
-}
-window.runCode    = runCode;
-window.submitCode = submitCode;
 
-function collapseResult() {
-  document.getElementById('resultTerminal').classList.remove('visible');
-}
-window.collapseResult = collapseResult;
+    async function sendCodeAction(type) {
+      const code = getEditorValue().trim();
+      if (!code) return;
+
+      const language = langSel.value;
+      const url = "{% url 'handle_submission' contest.id problem.id %}";
+
+      if (type === 'RUN') {
+        showOverlay('EXECUTING...');
+      } else {
+        showOverlay('JUDGING...');
+      }
+
+      try {
+        const minDelayPromise = new Promise(resolve => setTimeout(resolve, 1000));
+
+        const fetchPromise = fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+          },
+          body: JSON.stringify({
+            type: type,
+            code: code,
+            language: language
+          })
+        });
+
+        const [response] = await Promise.all([fetchPromise, minDelayPromise]);
+
+        const data = await response.json();
+        hideOverlay();
+
+        if (data.ok) {
+          if (type === 'RUN') {
+            console.log("Run testing success:", data);
+            showResultTerminal(RUN_RESULTS, 'run');
+          } else {
+            console.log("Submission success:", data);
+            // Display dummy results for now, but backend returned 'submitted'
+            showResultTerminal(SUBMIT_RESULTS, 'submit');
+          }
+        } else {
+          alert("Error: " + data.error);
+        }
+      } catch (error) {
+        hideOverlay();
+        console.error("Error:", error);
+        alert("Network error occurred.");
+      }
+    }
+
+    function runCode() {
+      sendCodeAction('RUN');
+    }
+
+    function submitCode() {
+      sendCodeAction('SUBMIT');
+    }
+    window.runCode = runCode;
+    window.submitCode = submitCode;
+
+    function collapseResult() {
+      document.getElementById('resultTerminal').classList.remove('visible');
+    }
+    window.collapseResult = collapseResult;
 
 
-/* ══════════════════════════════════════════
-   TAB SWITCHING
-══════════════════════════════════════════ */
-document.querySelectorAll('.tab-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.tab-btn').forEach(b => {
-      b.classList.remove('active');
-      b.setAttribute('aria-selected', 'false');
+    /* ══════════════════════════════════════════
+       TAB SWITCHING
+    ══════════════════════════════════════════ */
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => {
+          b.classList.remove('active');
+          b.setAttribute('aria-selected', 'false');
+        });
+        document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+
+        btn.classList.add('active');
+        btn.setAttribute('aria-selected', 'true');
+        document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
+      });
     });
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-
-    btn.classList.add('active');
-    btn.setAttribute('aria-selected', 'true');
-    document.getElementById('panel-' + btn.dataset.tab).classList.add('active');
-  });
-});
 
 
-/* ══════════════════════════════════════════
-   PAGE COUNTDOWN TIMER (static fallback)
-   Replace END_UNIX with {{ contest_end_unix }}
-══════════════════════════════════════════ */
-(function () {
-  const el = document.getElementById('pageTimer');
-  if (!el) return;
-  const END_UNIX = {{ contest_end_unix|default:0 }};
-  if (!END_UNIX) return;
+    /* ══════════════════════════════════════════
+       PAGE COUNTDOWN TIMER (static fallback)
+       Replace END_UNIX with {{ contest_end_unix }}
+    ══════════════════════════════════════════ */
+    (function () {
+      const el = document.getElementById('pageTimer');
+      if (!el) return;
+      const END_UNIX = parseInt("{{ contest_end_unix|default:0 }}", 10);
+      if (!END_UNIX) return;
 
-  const pad = n => String(n).padStart(2, '0');
-  function tick() {
-    const rem = Math.max(0, END_UNIX - Math.floor(Date.now() / 1000));
-    const h = Math.floor(rem / 3600);
-    const m = Math.floor((rem % 3600) / 60);
-    const s = rem % 60;
-    el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
-    if (rem <= 600) el.style.color = 'var(--red)';
-    if (rem > 0) setTimeout(tick, 1000);
-  }
-  tick();
-})();
+      const pad = n => String(n).padStart(2, '0');
+      function tick() {
+        const rem = Math.max(0, END_UNIX - Math.floor(Date.now() / 1000));
+        const h = Math.floor(rem / 3600);
+        const m = Math.floor((rem % 3600) / 60);
+        const s = rem % 60;
+        el.textContent = `${pad(h)}:${pad(m)}:${pad(s)}`;
+        if (rem <= 600) el.style.color = 'var(--red)';
+        if (rem > 0) setTimeout(tick, 1000);
+      }
+      tick();
+    })();
 
-})();
+  })();
 </script>
 {% endblock %}

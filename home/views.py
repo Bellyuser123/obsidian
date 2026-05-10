@@ -6,14 +6,13 @@ from django.contrib.auth import logout
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from .models import Contest, ContestProblem, Language, UserProblemSession, Submission
+from .models import Contest, ContestProblem, Language, Problem, TestCase
+from .models import Submission
+from .utils import run_in_docker
 from django.db.utils import OperationalError
 from django.http import JsonResponse
 from django.urls import reverse
-from django.views.decorators.http import require_POST
 import json
-from datetime import timedelta
-
 
 def auth_view(request):
     if request.method == "POST":
@@ -282,86 +281,73 @@ def problem_ide_view(request, contest_id, problem_id):
     }
     return render(request, 'home/problem_ide.html', context)
 
-@login_required
-@require_POST
-def submit_code(request, contest_id, problem_id):
-    # 1. Payload Size Limit
-    if len(request.body) > 65536: # 64KB max
-        return JsonResponse({'error': 'Payload too large'}, status=413)
 
+@login_required
+def handle_submission(request, contest_id, problem_id):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'POST required'}, status=405)
+    
     try:
         data = json.loads(request.body)
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
+    except Exception:
+        return JsonResponse({'ok': False, 'error': 'Invalid JSON'}, status=400)
+    
+    action_type = data.get('type')
+    code = data.get('code', '').strip()
+    language_slug = data.get('language')
 
-    code = data.get('code')
-    language_id = data.get('language_id')
-
-    if not code or not language_id:
-        return JsonResponse({'error': 'Code and language_id are required'}, status=400)
-
-    contest = get_object_or_404(Contest, id=contest_id)
-    now = timezone.now()
-
-    # 2. Active Contest Check
-    if now < contest.start_time or now > contest.end_time:
-        return JsonResponse({'error': 'Contest is not active'}, status=403)
-
-    # 3. Session Verification
-    if not UserProblemSession.objects.filter(user=request.user, contest=contest, problem_id=problem_id).exists():
-        return JsonResponse({'error': 'You must open the problem in the IDE first'}, status=403)
-
-    # 4. Rate Limiting
-    last_submission = Submission.objects.filter(
-        user=request.user, contest=contest, problem_id=problem_id
-    ).order_by('-time_submitted').first()
-
-    if last_submission and (now - last_submission.time_submitted) < timedelta(seconds=15):
-        return JsonResponse({'error': 'Please wait 15 seconds between submissions'}, status=429)
-
-    language = get_object_or_404(Language, id=language_id)
-    problem = get_object_or_404(ContestProblem, contest=contest, problem__id=problem_id).problem
-
-    # Create submission
-    sub = Submission.objects.create(
-        user=request.user,
-        contest=contest,
-        problem=problem,
-        code=code,
-        language=language,
-        status='PENDING',
-        is_accepted=False
-    )
-
-    # Celery Handoff
-    try:
-        from .tasks import judge_submission
-        judge_submission.delay(sub.id)
-    except Exception as e:
-        # Fallback or log if task fails to queue
-        print(f"Celery queuing error: {e}")
-
-    return JsonResponse({'submission_id': sub.id, 'message': 'Queued'}, status=202)
-
-@login_required
-def get_submission_status(request, submission_id):
-    try:
-        # Optimization for 700+ users checking status
-        submission = Submission.objects.only(
-            'user_id', 'status', 'execution_time', 'memory_used', 'error_message', 'is_accepted'
-        ).get(id=submission_id)
+    if not code:
+        return JsonResponse({'ok': False, 'error': 'Code is empty'}, status=400)
+    if len(code) > 60000:
+        return JsonResponse({'ok': False, 'error': 'Code exceeds maximum size of 60KB'}, status=400)
         
-        # Security: Only owner can view
-        if submission.user_id != request.user.id:
-            return JsonResponse({'error': 'Unauthorized'}, status=403)
-
-        return JsonResponse({
-            'status': submission.status,
-            'execution_time': submission.execution_time,
-            'memory_used': submission.memory_used,
-            'error_message': submission.error_message,
-            'is_accepted': submission.is_accepted
-        })
-    except Submission.DoesNotExist:
-        return JsonResponse({'error': 'Submission not found'}, status=404)
-
+    if action_type == 'RUN':
+        # Filler logic for "Run"
+        return JsonResponse({'ok': True, 'status': 'testing', 'message': 'Run initiated'})
+        
+    elif action_type == 'SUBMIT':
+        try:
+            contest = Contest.objects.get(id=contest_id)
+            problem = Problem.objects.get(id=problem_id)
+            language = Language.objects.get(slug=language_slug)
+        except (Contest.DoesNotExist, Problem.DoesNotExist, Language.DoesNotExist):
+            return JsonResponse({'ok': False, 'error': 'Invalid Contest, Problem, or Language ID'}, status=404)
+        
+        submission = Submission.objects.create(
+            user=request.user,
+            contest=contest,
+            problem=problem,
+            code=code,
+            language=language,
+            status='PENDING',
+            is_accepted=False
+        )
+        
+        # Evaluate using the first test case
+        test_case = problem.testcases.first()
+        if not test_case:
+            submission.status = 'RE'
+            submission.save()
+            return JsonResponse({'ok': False, 'error': 'No test cases configured for this problem'})
+            
+        result = run_in_docker(code, language, test_case.input_data)
+        
+        if result['status'] == 'TLE':
+            submission.status = 'TLE'
+        elif result['status'] == 'RE':
+            submission.status = 'RE'
+        elif result['status'] == 'SUCCESS':
+            # Compare output (normalize line endings)
+            expected = test_case.expected_output.strip().replace('\r\n', '\n')
+            actual = result.get('output', '').strip().replace('\r\n', '\n')
+            
+            if expected == actual:
+                submission.status = 'AC'
+                submission.is_accepted = True
+            else:
+                submission.status = 'WA'
+                
+        submission.save()
+        return JsonResponse({'ok': True, 'status': submission.status, 'submission_id': submission.id})
+    else:
+        return JsonResponse({'ok': False, 'error': 'Invalid action type'}, status=400)
