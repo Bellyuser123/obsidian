@@ -7,3 +7,11 @@ pytz==2020.1
 python-dotenv==1.0.1
 gunicorn==23.0.0
 requests==2.24.0
+# Tree-sitter static analysis (requires Python 3.9+ 64-bit)
+tree-sitter
+tree-sitter-python
+tree-sitter-cpp
+tree-sitter-c
+tree-sitter-javascript
+tree-sitter-go
+tree-sitter-rust

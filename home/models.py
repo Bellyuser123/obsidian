@@ -59,13 +59,17 @@ class CodeStub(models.Model):
 class ProblemRule(models.Model):
     """The 'Custom Checker' logic for mandatory/forbidden constructs."""
     RULE_TYPES = [
-        ('MANDATORY', 'Must Use'),
-        ('FORBIDDEN', 'Must Not Use'),
-        ('STRUCTURAL', 'Structural Check (e.g. Recursion)'),
+        ('MANDATORY', 'Must Use (Exact Token)'),
+        ('FORBIDDEN', 'Must Not Use (Exact Token)'),
+        ('STRUCTURAL', 'Structural Check (e.g. recursion, inheritance, lines_X)'),
     ]
     problem = models.ForeignKey(Problem, on_delete=models.CASCADE, related_name='rules')
+    language = models.ForeignKey('Language', on_delete=models.CASCADE, null=True, blank=True, help_text="Leave blank to apply to all languages")
     rule_type = models.CharField(max_length=20, choices=RULE_TYPES)
-    keyword = models.CharField(max_length=100, help_text="The function/method name (e.g. 'math.sqrt' or 'for')")
+    keyword = models.CharField(
+        max_length=100, 
+        help_text="Exact token (e.g. 'set') OR Structure (e.g. 'recursion', 'inheritance', 'lines_5')"
+    )
     error_message = models.CharField(max_length=255, help_text="User-friendly error if rule is broken")
 
     def __str__(self): return f"{self.rule_type}: {self.keyword}"
@@ -79,6 +83,7 @@ class Contest(models.Model):
     passkey = models.CharField(max_length=50, blank=True, null=True)
     tags = models.CharField(max_length=200, blank=True, help_text="Comma-separated tags (e.g. AI, WEB, DSA)")
     prize = models.CharField(max_length=100, blank=True, help_text="Prize pool info")
+    penalty_minutes = models.IntegerField(default=10, help_text="Penalty in minutes added per wrong submission")
 
     problems = models.ManyToManyField(Problem, through='ContestProblem', related_name='contests')
 
@@ -134,6 +139,7 @@ class Submission(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pending'),
         ('AC', 'Accepted'),
+        ('PARTIAL', 'Partial'),
         ('WA', 'Wrong Answer'),
         ('TLE', 'Time Limit Exceeded'),
         ('RE', 'Runtime Error'),
@@ -151,10 +157,14 @@ class Submission(models.Model):
     is_accepted = models.BooleanField(default=False)
     time_submitted = models.DateTimeField(auto_now_add=True)
 
-    # Optional: store execution time and memory for the result terminal
+    # Execution Stats
     execution_time = models.FloatField(default=0.0, help_text="Seconds")
     memory_used = models.IntegerField(default=0, help_text="KB")
     error_message = models.TextField(blank=True, null=True, help_text="Compilation or Runtime errors")
+
+    # Scoring & Timing
+    score_awarded = models.FloatField(default=0.0)
+    total_time_taken = models.FloatField(default=0.0, help_text="Total time to solve in minutes, including penalties")
 
     # NOTE: unique_together is REMOVED to allow multiple attempts
 

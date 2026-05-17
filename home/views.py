@@ -7,8 +7,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from .models import Contest, ContestProblem, Language, Problem, TestCase
-from .models import Submission
-from .utils import run_in_docker
+from .models import Submission, UserProblemSession
+from .utils import judge_problem
+from .rule_checker import check_rules
 from django.db.utils import OperationalError
 from django.http import JsonResponse
 from django.urls import reverse
@@ -128,37 +129,75 @@ def contest_lobby(request, contest_id):
     # Build a simple leaderboard: count accepted problems per user and use last accepted time as tiebreaker
     leaderboard = []
     try:
-        subs = Submission.objects.filter(contest=contest, is_accepted=True).select_related('user')
-        if subs.exists():
-            # aggregate per user
-            from django.db.models import Count, Max
-            user_stats = subs.values('user__id', 'user__username').annotate(solved=Count('problem'), latest=Max('time_submitted'))
-            for u in user_stats:
-                latest_dt = u['latest']
-                # compute time taken from contest start to latest accepted submission
-                time_taken = int((latest_dt - contest.start_time).total_seconds()) if latest_dt and contest.start_time else 0
-                # format as H:MM:SS or Dd H:MM:SS for long durations
-                def fmt(secs):
-                    if secs <= 0:
-                        return '00:00:00'
-                    h = secs // 3600
-                    m = (secs % 3600) // 60
-                    s = secs % 60
-                    return f"{h}:{str(m).zfill(2)}:{str(s).zfill(2)}"
-
-                leaderboard.append({
-                    'user_id': u['user__id'],
-                    'username': u['user__username'],
-                    'solved': u['solved'],
-                    'latest': latest_dt,
-                    'time_taken': time_taken,
-                    'time_taken_str': fmt(time_taken),
-                })
-            # sort by solved DESC, then latest ASC (earlier latest submission means faster)
-            leaderboard.sort(key=lambda r: (-r['solved'], r['latest']))
-
-        # user's solved problems for marking rows
-        solved_problems = list(subs.filter(user=request.user).values_list('problem__id', flat=True)) if request.user.is_authenticated else []
+        # Get all submissions for this contest to process leaderboard in-memory
+        all_subs = Submission.objects.filter(contest=contest).select_related('user', 'problem')
+        
+        user_data = {}
+        for sub in all_subs:
+            uid = sub.user.id
+            username = sub.user.username
+            pid = sub.problem.id
+            
+            if uid not in user_data:
+                user_data[uid] = {
+                    'user_id': uid,
+                    'username': username,
+                    'problems': {}
+                }
+                
+            prob_dict = user_data[uid]['problems']
+            
+            # Track highest score and minimum time taken for each problem
+            if pid not in prob_dict:
+                prob_dict[pid] = {
+                    'score': sub.score_awarded or 0.0,
+                    'time_taken': sub.total_time_taken or 0.0,
+                    'is_accepted': sub.is_accepted
+                }
+            else:
+                current_best = prob_dict[pid]
+                sub_score = sub.score_awarded or 0.0
+                sub_time = sub.total_time_taken or 0.0
+                if (sub_score > current_best['score']) or \
+                   (sub_score == current_best['score'] and sub_time < current_best['time_taken']):
+                    prob_dict[pid] = {
+                        'score': sub_score,
+                        'time_taken': sub_time,
+                        'is_accepted': sub.is_accepted or current_best['is_accepted']
+                    }
+                    
+        # Compile leaderboard list
+        for uid, uinfo in user_data.items():
+            solved_count = sum(1 for p in uinfo['problems'].values() if p['is_accepted'])
+            total_score = sum(p['score'] for p in uinfo['problems'].values())
+            total_time = sum(p['time_taken'] for p in uinfo['problems'].values())
+            
+            # Format time taken (total_time is in minutes)
+            def fmt(mins):
+                if mins <= 0:
+                    return '00:00:00'
+                secs = int(mins * 60)
+                h = secs // 3600
+                m = (secs % 3600) // 60
+                s = secs % 60
+                return f"{h}:{str(m).zfill(2)}:{str(s).zfill(2)}"
+                
+            leaderboard.append({
+                'user_id': uid,
+                'username': uinfo['username'],
+                'solved': solved_count,
+                'score': total_score,
+                'time_taken': total_time,
+                'time_taken_str': fmt(total_time),
+            })
+            
+        # Sort by solved DESC, then score DESC, then time_taken ASC
+        leaderboard.sort(key=lambda r: (-r['solved'], -r['score'], r['time_taken']))
+        
+        # User's solved problems for marking rows
+        solved_problems = list(Submission.objects.filter(
+            user=request.user, contest=contest, is_accepted=True
+        ).values_list('problem__id', flat=True).distinct()) if request.user.is_authenticated else []
     except OperationalError:
         # Submission table doesn't exist (migrations not applied) — fallback to dummy leaderboard
         import datetime
@@ -301,18 +340,61 @@ def handle_submission(request, contest_id, problem_id):
     if len(code) > 60000:
         return JsonResponse({'ok': False, 'error': 'Code exceeds maximum size of 60KB'}, status=400)
         
+    try:
+        contest = Contest.objects.get(id=contest_id)
+        problem = Problem.objects.get(id=problem_id)
+        language = Language.objects.get(slug=language_slug)
+    except (Contest.DoesNotExist, Problem.DoesNotExist, Language.DoesNotExist):
+        return JsonResponse({'ok': False, 'error': 'Invalid Contest, Problem, or Language ID'}, status=404)
+
+    # ── Static Analysis Gate (Tree-sitter) ──────────────────────────────
+    # Runs BEFORE Docker is ever touched. Custom input (RUN) skips rules.
+    is_custom_run = (action_type == 'RUN' and data.get('is_custom', False))
+    if not is_custom_run:
+        rules = problem.rules.all()
+        violations = check_rules(code, language_slug, rules)
+        if violations:
+            # Format violations into a user-readable result terminal entry
+            error_lines = '\n'.join(
+                f"[{v['rule_type']}] {v['message']}" for v in violations
+            )
+            rule_result = [{
+                'id': '00',
+                'status': 'fail',
+                'label': 'RULE VIOLATION',
+                'stdout': '',
+                'stderr': error_lines,
+                'expected': '',
+                'time': '0.0s'
+            }]
+            return JsonResponse({'ok': True, 'results': rule_result, 'type': action_type.lower()})
+
     if action_type == 'RUN':
-        # Filler logic for "Run"
-        return JsonResponse({'ok': True, 'status': 'testing', 'message': 'Run initiated'})
+        is_custom = data.get('is_custom', False)
         
+        if is_custom:
+            custom_input = data.get('custom_input', '')
+            
+            # Create a mock TestCase-like object for the batch judge
+            class MockTestCase:
+                def __init__(self, id, input_data):
+                    self.id = id
+                    self.input_data = input_data
+                    self.expected_output = ''
+            
+            results = judge_problem(code, language, [MockTestCase('custom', custom_input)], stop_on_fail=False)
+            return JsonResponse({'ok': True, 'results': results, 'type': 'custom', 'custom_input': custom_input})
+            
+        else:
+            # Retrieve sample test cases
+            sample_cases = problem.testcases.filter(is_sample=True).order_by('id')
+            if not sample_cases.exists():
+                return JsonResponse({'ok': False, 'error': 'No sample test cases configured.'})
+                
+            # Evaluate without stopping on first failure so user sees all samples
+            results = judge_problem(code, language, sample_cases, stop_on_fail=False)
+            return JsonResponse({'ok': True, 'results': results, 'type': 'run'})
     elif action_type == 'SUBMIT':
-        try:
-            contest = Contest.objects.get(id=contest_id)
-            problem = Problem.objects.get(id=problem_id)
-            language = Language.objects.get(slug=language_slug)
-        except (Contest.DoesNotExist, Problem.DoesNotExist, Language.DoesNotExist):
-            return JsonResponse({'ok': False, 'error': 'Invalid Contest, Problem, or Language ID'}, status=404)
-        
         submission = Submission.objects.create(
             user=request.user,
             contest=contest,
@@ -323,31 +405,122 @@ def handle_submission(request, contest_id, problem_id):
             is_accepted=False
         )
         
-        # Evaluate using the first test case
-        test_case = problem.testcases.first()
-        if not test_case:
+        # Evaluate against ALL test cases
+        all_cases = problem.testcases.all().order_by('id')
+        if not all_cases.exists():
             submission.status = 'RE'
             submission.save()
             return JsonResponse({'ok': False, 'error': 'No test cases configured for this problem'})
             
-        result = run_in_docker(code, language, test_case.input_data)
+        results = judge_problem(code, language, all_cases, stop_on_fail=False)
         
-        if result['status'] == 'TLE':
-            submission.status = 'TLE'
-        elif result['status'] == 'RE':
-            submission.status = 'RE'
-        elif result['status'] == 'SUCCESS':
-            # Compare output (normalize line endings)
-            expected = test_case.expected_output.strip().replace('\r\n', '\n')
-            actual = result.get('output', '').strip().replace('\r\n', '\n')
-            
-            if expected == actual:
-                submission.status = 'AC'
-                submission.is_accepted = True
-            else:
-                submission.status = 'WA'
-                
+        # Calculate execution stats
+        max_time = 0.0
+        max_mem = 0
+        passed_count = 0
+        total_count = all_cases.count()
+        
+        for r in results:
+            if r['status'] == 'pass':
+                passed_count += 1
+            try:
+                t = float(r.get('time', '0s').replace('s', ''))
+                if t > max_time: max_time = t
+            except ValueError:
+                pass
+            m = r.get('mem_kb', 0)
+            if m > max_mem: max_mem = m
+
+        # Determine final status
+        if total_count == 0:
+             final_status = 'RE'
+             is_accepted = False
+        elif passed_count == total_count:
+             final_status = 'AC'
+             is_accepted = True
+        elif passed_count > 0:
+             final_status = 'PARTIAL'
+             is_accepted = False
+        else:
+             is_accepted = False
+             first_fail = next((r for r in results if r['status'] != 'pass'), None)
+             if first_fail:
+                 reverse_map = {'WRONG ANSWER': 'WA', 'TIME LIMIT': 'TLE', 'RUNTIME ERROR': 'RE', 'COMPILE ERROR': 'CE'}
+                 final_status = reverse_map.get(first_fail['label'], 'RE')
+             else:
+                 final_status = 'RE'
+                 
+        # Calculate Score
+        cp = ContestProblem.objects.filter(contest=contest, problem=problem).first()
+        points_available = cp.points if cp else 0
+        base_score = (passed_count / total_count) * points_available if total_count > 0 else 0
+        
+        # Calculate Time & Penalties
+        session = UserProblemSession.objects.filter(user=request.user, contest=contest, problem=problem).first()
+        time_diff_minutes = (timezone.now() - session.first_opened_at).total_seconds() / 60.0 if session else 0.0
+        
+        # Count previous non-AC submissions for this problem to apply penalty
+        failed_count = Submission.objects.filter(
+            user=request.user, contest=contest, problem=problem
+        ).exclude(id=submission.id).exclude(status__in=['AC', 'PARTIAL']).count()
+        
+        penalty_time = failed_count * contest.penalty_minutes
+        
+        submission.status = final_status
+        submission.is_accepted = is_accepted
+        submission.score_awarded = base_score
+        submission.total_time_taken = time_diff_minutes + penalty_time
+        submission.execution_time = max_time
+        submission.memory_used = max_mem
         submission.save()
-        return JsonResponse({'ok': True, 'status': submission.status, 'submission_id': submission.id})
+        
+        # Update Profile Score (only add the difference if they improved)
+        from django.db.models import Max
+        best_previous = Submission.objects.filter(
+            user=request.user, contest=contest, problem=problem
+        ).exclude(id=submission.id).aggregate(Max('score_awarded'))['score_awarded__max']
+        
+        best_previous = best_previous or 0.0
+        
+        if base_score > best_previous:
+            diff = base_score - best_previous
+            profile = request.user.profile
+            profile.total_score += int(diff)
+            profile.save()
+        
+        # Scrub hidden test cases before returning
+        for idx, tc in enumerate(all_cases):
+            if not tc.is_sample:
+                # results is 0-indexed, up to len(results)
+                if idx < len(results):
+                    results[idx]['expected'] = 'Hidden Test Case'
+                    results[idx]['stdout'] = 'Hidden Test Case Output'
+            
+        return JsonResponse({'ok': True, 'results': results, 'type': 'submit'})
     else:
         return JsonResponse({'ok': False, 'error': 'Invalid action type'}, status=400)
+
+
+@login_required
+def submission_history_api(request, contest_id, problem_id):
+    """Returns JSON history of user's submissions for a specific problem."""
+    submissions = Submission.objects.filter(
+        user=request.user, contest_id=contest_id, problem_id=problem_id
+    ).order_by('-time_submitted')
+    
+    data = []
+    for sub in submissions:
+        data.append({
+            'id': sub.id,
+            'time': sub.time_submitted.strftime("%b %d, %H:%M"),
+            'status': sub.status,
+            'language': sub.language.name if sub.language else 'Unknown',
+            'score': round(sub.score_awarded, 2),
+            'execution_time': f"{sub.execution_time:.3f}s",
+            'memory_used': f"{sub.memory_used} KB",
+            'total_time': f"{sub.total_time_taken:.1f}m",
+            'code': sub.code,
+            'error_message': sub.error_message or ''
+        })
+        
+    return JsonResponse({'ok': True, 'submissions': data})
