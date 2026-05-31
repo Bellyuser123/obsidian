@@ -4,3 +4,5 @@ __pycache__/
 *.pyc
 .env
 scratch/
+testcase_inputs/
+testcase_outputs/
