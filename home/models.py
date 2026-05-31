@@ -11,6 +11,7 @@ class Profile(models.Model):
     full_name = models.CharField(max_length=100)
     roll_no = models.CharField(max_length=20, unique=True)
     total_score = models.IntegerField(default=0)
+    is_disqualified = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.user.username} - {self.roll_no}"
@@ -89,6 +90,7 @@ class Contest(models.Model):
     prize = models.CharField(max_length=100, blank=True, help_text="Prize pool info")
     penalty_minutes = models.IntegerField(default=10, help_text="Penalty in minutes added per wrong submission")
     is_team_contest = models.BooleanField(default=False, help_text="Is this a team participation contest?")
+    enable_anti_cheat = models.BooleanField(default=True, help_text="Master toggle for the anti-cheat proctoring framework.")
 
     problems = models.ManyToManyField(Problem, through='ContestProblem', related_name='contests')
 
@@ -247,3 +249,36 @@ class Submission(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.problem.title} @ {self.time_submitted} ({'AC' if self.is_accepted else 'WA'})"
+
+
+class ContestParticipation(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contest_participations')
+    contest = models.ForeignKey(Contest, on_delete=models.CASCADE, related_name='participations')
+    is_disqualified = models.BooleanField(default=False, help_text="Designates whether the user is disqualified from this contest.")
+    registered_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'contest')
+
+    def __str__(self):
+        return f"{self.user.username} in {self.contest.name} (Disqualified: {self.is_disqualified})"
+
+
+class ViolationLog(models.Model):
+    VIOLATION_CHOICES = [
+        ('TAB_SWITCH', 'Tab Switch / Blur'),
+        ('CLIPBOARD', 'Clipboard Access'),
+        ('DEVTOOLS', 'DevTools Opened'),
+        ('FULLSCREEN', 'Fullscreen Exited'),
+        ('DOM_INJECTION', 'DOM Injection Detect'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='violations')
+    contest = models.ForeignKey(Contest, on_delete=models.CASCADE, related_name='violations')
+    violation_type = models.CharField(max_length=20, choices=VIOLATION_CHOICES)
+    strike_number = models.IntegerField(help_text="Strike sequence number (e.g. 1, 2, 3)")
+    timestamp = models.DateTimeField(auto_now_add=True)
+    details = models.TextField(blank=True, null=True, help_text="Contextual details of the violation")
+
+    def __str__(self):
+        return f"{self.user.username} - {self.violation_type} (Strike {self.strike_number}) in {self.contest.name}"

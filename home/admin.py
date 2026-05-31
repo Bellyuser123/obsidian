@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     Profile, Language, Problem, ProblemRule, Contest, 
-    ContestProblem, TestCase, UserProblemSession, Submission, CodeStub
+    ContestProblem, TestCase, UserProblemSession, Submission, CodeStub,
+    ContestParticipation, ViolationLog
 )
 
 class ProfileAdmin(admin.ModelAdmin):
@@ -78,7 +79,8 @@ class ContestProblemInline(admin.TabularInline):
 
 
 class ContestAdmin(admin.ModelAdmin):
-    list_display = ('name', 'start_time', 'end_time', 'passkey', 'is_team_contest', 'prize')
+    list_display = ('name', 'start_time', 'end_time', 'passkey', 'is_team_contest', 'enable_anti_cheat', 'prize')
+    list_editable = ('enable_anti_cheat',)
     search_fields = ('name', 'description', 'tags')
     list_filter = ('start_time', 'end_time', 'is_team_contest')
     inlines = [ContestProblemInline]
@@ -109,13 +111,33 @@ class UserProblemSessionAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'problem__title')
 
 
+class ViolationLogAdmin(admin.ModelAdmin):
+    list_display = ('timestamp', 'user', 'contest', 'violation_type', 'strike_number')
+    list_filter = ('contest', 'violation_type', 'strike_number')
+    search_fields = ('user__username', 'details')
+    readonly_fields = ('user', 'contest', 'violation_type', 'strike_number', 'timestamp', 'details')
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return True
+
+
+class ContestParticipationAdmin(admin.ModelAdmin):
+    list_display = ('user', 'contest', 'is_disqualified', 'registered_at')
+    list_filter = ('contest', 'is_disqualified')
+    search_fields = ('user__username',)
+
+
 # Register all models
 admin.site.register(Profile, ProfileAdmin)
 admin.site.register(Language, LanguageAdmin)
 admin.site.register(Problem, ProblemAdmin)
-# admin.site.register(ProblemRule) Can be registered separately or just via Inline
 admin.site.register(Contest, ContestAdmin)
-# admin.site.register(TestCase) Usually managed via Inline, but good to have
 admin.site.register(Submission, SubmissionAdmin)
-# admin.site.register(UserProblemSession, UserProblemSessionAdmin)
-# admin.site.register(ContestProblem) Managed via Inline but registered for direct access
+admin.site.register(ViolationLog, ViolationLogAdmin)
+admin.site.register(ContestParticipation, ContestParticipationAdmin)

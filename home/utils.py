@@ -198,10 +198,19 @@ exit $RET
                 f.write("\n")
 
         # 4. Ensure container image is pulled
-        inspect_result = subprocess.run([runner, 'image', 'inspect', language.docker_image], capture_output=True)
+        image_name = language.docker_image
+        parts = image_name.split('/')
+        if len(parts) == 1:
+            # Single-word name (e.g. 'gcc:latest') -> official docker library image
+            image_name = f"docker.io/library/{image_name}"
+        elif '.' not in parts[0] and ':' not in parts[0] and parts[0] != 'localhost':
+            # E.g. 'library/gcc:latest' or 'ubuntu/nginx' -> prefix docker.io/
+            image_name = f"docker.io/{image_name}"
+
+        inspect_result = subprocess.run([runner, 'image', 'inspect', image_name], capture_output=True)
         if inspect_result.returncode != 0:
-            print(f"[DEBUG] Pulling image {language.docker_image}...")
-            subprocess.run([runner, 'pull', language.docker_image], capture_output=True, timeout=120)
+            print(f"[DEBUG] Pulling image {image_name}...")
+            subprocess.run([runner, 'pull', image_name], capture_output=True, timeout=120)
 
         # 5. Run Container Batch — outer Python timeout = global_limit + 5s grace for container startup
         vol_suffix = ':z' if runner == 'podman' else ''
@@ -212,7 +221,7 @@ exit $RET
             '--cpus', '1.0',
             '-v', f'{temp_dir}:/usr/src/app{vol_suffix}',
             '-w', '/usr/src/app',
-            language.docker_image,
+            image_name,
             '/bin/sh', '-c', f'timeout {global_limit} /bin/sh runner.sh'
         ]
 

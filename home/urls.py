@@ -14,4 +14,6 @@ urlpatterns = [
     path('contest/<int:contest_id>/problem/<int:problem_id>/submissions_api/', views.submission_history_api, name='submission_history_api'),
     path('submission/<int:submission_id>/status/', views.submission_status_api, name='submission_status_api'),
     path('run/<int:problem_id>/status/', views.run_status_api, name='run_status_api'),
+    path('contest/<int:contest_id>/violation/', views.log_violation, name='log_violation'),
+    path('contest/<int:contest_id>/unban/', views.unban_self, name='unban_self'),
 ]

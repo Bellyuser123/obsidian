@@ -392,3 +392,103 @@ class TestCaseValidationAndScoringTests(TestCase):
             self.assertEqual(results[0]['expected'], 'secret expected data')
             self.assertEqual(results[0]['stdout'], 'secret expected data')
 
+    def test_anti_cheat_telemetry_endpoint(self):
+        from home.models import ViolationLog, ContestParticipation, Profile
+        # 1. Register a user and log in
+        user = User.objects.create_user(username='cheat_student', password='password123')
+        Profile.objects.create(user=user, full_name="Cheat Student", roll_no="CHEAT101")
+        self.client.login(username='cheat_student', password='password123')
+
+        # 2. Create contest
+        contest = Contest.objects.create(
+            name="Anti-Cheat Test Contest",
+            start_time=timezone.now(),
+            end_time=timezone.now() + datetime.timedelta(hours=2),
+            enable_anti_cheat=True
+        )
+
+        # 3. Report first violation (Strike 1)
+        url = reverse('log_violation', args=[contest.id])
+        res1 = self.client.post(url, {'violation_type': 'TAB_SWITCH', 'details': 'Switched tab once'})
+        self.assertEqual(res1.status_code, 200)
+        data1 = res1.json()
+        self.assertEqual(data1['action'], 'WARN')
+        self.assertEqual(data1['current_strikes'], 1)
+
+        # 4. Report second violation (Strike 2)
+        res2 = self.client.post(url, {'violation_type': 'CLIPBOARD', 'details': 'Tried copying'})
+        self.assertEqual(res2.status_code, 200)
+        data2 = res2.json()
+        self.assertEqual(data2['action'], 'WARN')
+        self.assertEqual(data2['current_strikes'], 2)
+
+        # 5. Report third violation (Strike 3 - BAN)
+        res3 = self.client.post(url, {'violation_type': 'DEVTOOLS', 'details': 'Opened inspect'})
+        self.assertEqual(res3.status_code, 200)
+        data3 = res3.json()
+        self.assertEqual(data3['action'], 'BAN')
+
+        # 6. Verify that logs exist in DB
+        self.assertEqual(ViolationLog.objects.filter(user=user, contest=contest).count(), 3)
+        participation = ContestParticipation.objects.get(user=user, contest=contest)
+        self.assertTrue(participation.is_disqualified)
+        
+        # Verify user profile remains active (contest-specific disqualification only)
+        user.refresh_from_db()
+        self.assertFalse(user.profile.is_disqualified)
+
+        # 7. Unban self and verify reset
+        unban_url = reverse('unban_self', args=[contest.id])
+        res_unban = self.client.get(unban_url)
+        self.assertRedirects(res_unban, reverse('contest_lobby', args=[contest.id]))
+        
+        participation.refresh_from_db()
+        self.assertFalse(participation.is_disqualified)
+        self.assertEqual(ViolationLog.objects.filter(user=user, contest=contest).count(), 0)
+
+    def test_anti_cheat_gatekeeper(self):
+        from home.models import ContestParticipation
+        # 1. Register user
+        user = User.objects.create_user(username='banned_student', password='password123')
+        self.client.login(username='banned_student', password='password123')
+
+        # 2. Create contest and problem
+        contest = Contest.objects.create(
+            name="Secure Contest",
+            start_time=timezone.now() - datetime.timedelta(hours=1),
+            end_time=timezone.now() + datetime.timedelta(hours=1),
+            enable_anti_cheat=True
+        )
+        cp = ContestProblem.objects.create(contest=contest, problem=self.problem, points=10)
+
+        # 3. Access lobby and IDE (should pass initially)
+        lobby_url = reverse('contest_lobby', args=[contest.id])
+        ide_url = reverse('problem_ide', args=[contest.id, self.problem.id])
+        
+        r1 = self.client.get(lobby_url)
+        self.assertEqual(r1.status_code, 200)
+        r2 = self.client.get(ide_url)
+        self.assertEqual(r2.status_code, 200)
+
+        # 4. Disqualify user
+        participation = ContestParticipation.objects.get(user=user, contest=contest)
+        participation.is_disqualified = True
+        participation.save()
+
+        # 5. Access lobby and IDE (should be blocked as 403 Forbidden)
+        r3 = self.client.get(lobby_url)
+        self.assertEqual(r3.status_code, 403)
+        self.assertTemplateUsed(r3, 'home/disqualified.html')
+
+        r4 = self.client.get(ide_url)
+        self.assertEqual(r4.status_code, 403)
+        self.assertTemplateUsed(r4, 'home/disqualified.html')
+
+        # 6. Make user a staff member (Admin bypass) and access again (should pass)
+        user.is_staff = True
+        user.save()
+        r5 = self.client.get(lobby_url)
+        self.assertEqual(r5.status_code, 200)
+        r6 = self.client.get(ide_url)
+        self.assertEqual(r6.status_code, 200)
+

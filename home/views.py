@@ -7,7 +7,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from .models import Contest, ContestProblem, Language, Problem, TestCase
-from .models import Submission, UserProblemSession
+from .models import Submission, UserProblemSession, ContestParticipation, ViolationLog
 from .utils import judge_problem
 from .rule_checker import check_rules
 from django.db.utils import OperationalError
@@ -16,6 +16,7 @@ from django.urls import reverse
 from django.core.cache import cache
 from .tasks import judge_submission, run_code_task
 import json
+from django.views.decorators.http import require_POST
 
 def auth_view(request):
     if request.method == "POST":
@@ -107,9 +108,27 @@ def dashboard_view(request):
     return render(request, 'home/dashboard.html', context)
 
 
+def check_disqualified(user, contest):
+    if not user.is_authenticated:
+        return False
+    if user.is_staff or user.is_superuser:
+        return False
+    participation = ContestParticipation.objects.filter(user=user, contest=contest).first()
+    if participation and participation.is_disqualified:
+        return True
+    return False
+
+
 @login_required
 def contest_lobby(request, contest_id):
     contest = get_object_or_404(Contest, id=contest_id)
+    
+    if check_disqualified(request.user, contest):
+        return render(request, 'home/disqualified.html', {'contest': contest}, status=403)
+        
+    if request.user.is_authenticated:
+        ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
+        
     now = timezone.now()
 
     is_live = contest.start_time <= now <= contest.end_time
@@ -370,22 +389,32 @@ def enter_contest(request, contest_id):
         return JsonResponse({'ok': False, 'error': 'POST required'}, status=405)
 
     contest = get_object_or_404(Contest, id=contest_id)
+    
+    if check_disqualified(request.user, contest):
+        return JsonResponse({'ok': False, 'error': 'You are disqualified from this contest.'}, status=403)
+
     now = timezone.now()
     is_archived = now > contest.end_time
 
     # Archived contests don't require a passkey
     if is_archived:
+        if request.user.is_authenticated:
+            ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
         return JsonResponse({'ok': True, 'redirect': reverse('contest_lobby', args=[contest.id])})
 
     provided = request.POST.get('passkey', '') or ''
     # If contest has a passkey configured, validate it
     if contest.passkey:
         if provided and provided == contest.passkey:
+            if request.user.is_authenticated:
+                ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
             return JsonResponse({'ok': True, 'redirect': reverse('contest_lobby', args=[contest.id])})
         else:
             return JsonResponse({'ok': False, 'error': 'Invalid passkey'}, status=403)
 
     # No passkey set — allow entry
+    if request.user.is_authenticated:
+        ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
     return JsonResponse({'ok': True, 'redirect': reverse('contest_lobby', args=[contest.id])})
 
 
@@ -393,6 +422,13 @@ def enter_contest(request, contest_id):
 def problem_ide_view(request, contest_id, problem_id):
     """Render the problem IDE page where the user can solve and upload code."""
     contest = get_object_or_404(Contest, id=contest_id)
+    
+    if check_disqualified(request.user, contest):
+        return render(request, 'home/disqualified.html', {'contest': contest}, status=403)
+        
+    if request.user.is_authenticated:
+        ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
+        
     # try to load the problem object via ContestProblem relation
     cp = get_object_or_404(ContestProblem, contest=contest, problem__id=problem_id)
     problem = cp.problem
@@ -437,6 +473,10 @@ def problem_ide_view(request, contest_id, problem_id):
     
     code_stubs_json = json.dumps(stubs_dict)
 
+    current_strikes = 0
+    if request.user.is_authenticated:
+        current_strikes = ViolationLog.objects.filter(user=request.user, contest=contest).count()
+
     context = {
         'contest': contest,
         'problem': problem,
@@ -448,6 +488,8 @@ def problem_ide_view(request, contest_id, problem_id):
         'sample_cases': sample_cases,
         'allowed_languages': allowed_languages,
         'code_stubs_json': code_stubs_json,
+        'ANTI_CHEAT_ENABLED': contest.enable_anti_cheat,
+        'CURRENT_STRIKES': current_strikes,
     }
     return render(request, 'home/problem_ide.html', context)
 
@@ -733,4 +775,60 @@ def run_status_api(request, problem_id):
         return JsonResponse(status_data)
         
     return JsonResponse({'ok': False, 'error': 'Run status not found'}, status=404)
+
+
+@login_required
+@require_POST
+def log_violation(request, contest_id):
+    contest = get_object_or_404(Contest, id=contest_id)
+    if not contest.enable_anti_cheat:
+        return JsonResponse({'ok': True, 'action': 'NONE'})
+
+    violation_type = request.POST.get('violation_type')
+    details = request.POST.get('details', '')
+
+    # Check if they are already disqualified
+    participation, created = ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
+    if participation.is_disqualified:
+        return JsonResponse({'action': 'BAN'})
+
+    # Count current logs for user in this contest
+    existing_strikes = ViolationLog.objects.filter(user=request.user, contest=contest).count()
+    strike_number = existing_strikes + 1
+
+    ViolationLog.objects.create(
+        user=request.user,
+        contest=contest,
+        violation_type=violation_type,
+        strike_number=strike_number,
+        details=details
+    )
+
+    if strike_number >= 3:
+        participation.is_disqualified = True
+        participation.save()
+        return JsonResponse({'action': 'BAN'})
+    else:
+        return JsonResponse({'action': 'WARN', 'current_strikes': strike_number})
+
+
+@login_required
+def unban_self(request, contest_id):
+    from .models import Contest, ContestParticipation, ViolationLog
+    contest = get_object_or_404(Contest, id=contest_id)
+    
+    participation = ContestParticipation.objects.filter(user=request.user, contest=contest).first()
+    if participation:
+        participation.is_disqualified = False
+        participation.save()
+        
+    profile = getattr(request.user, 'profile', None)
+    if profile:
+        profile.is_disqualified = False
+        profile.save()
+
+    ViolationLog.objects.filter(user=request.user, contest=contest).delete()
+    
+    messages.success(request, "Your proctor strikes and disqualification have been reset successfully.")
+    return redirect('contest_lobby', contest_id=contest.id)
 

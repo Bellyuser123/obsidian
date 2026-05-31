@@ -1,0 +1,115 @@
+{% extends "home/base.html" %}
+{% load static %}
+
+{% block title %}DISQUALIFIED — Obsidian Proctor{% endblock %}
+
+{% block extra_css %}
+<style>
+  .dq-container {
+    max-width: 650px;
+    margin: 100px auto;
+    padding: 30px;
+    background: #110808;
+    border: 2px solid #ff4060;
+    box-shadow: 0 0 30px rgba(255, 64, 96, 0.25);
+    clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+    font-family: 'JetBrains Mono', monospace;
+    color: #ffd0d5;
+    text-align: center;
+  }
+
+  .dq-title {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 24px;
+    color: #ff4060;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(255, 64, 96, 0.5);
+    letter-spacing: 2px;
+  }
+
+  .dq-subtitle {
+    font-size: 14px;
+    letter-spacing: 1px;
+    color: #aaa;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+  }
+
+  .dq-icon {
+    font-size: 60px;
+    color: #ff4060;
+    margin-bottom: 20px;
+    animation: flash 1s infinite alternate;
+  }
+
+  .dq-box {
+    background: rgba(255, 64, 96, 0.05);
+    border: 1px solid rgba(255, 64, 96, 0.2);
+    padding: 20px;
+    text-align: left;
+    margin-bottom: 30px;
+    border-radius: 4px;
+  }
+
+  .dq-box h3 {
+    margin-top: 0;
+    font-size: 14px;
+    color: #ff4060;
+    border-bottom: 1px solid rgba(255, 64, 96, 0.2);
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+  }
+
+  .dq-box p {
+    font-size: 13px;
+    line-height: 1.6;
+    margin-bottom: 0;
+  }
+
+  .dq-button {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 10px;
+    color: #110808;
+    background: #ff4060;
+    border: none;
+    padding: 12px 24px;
+    cursor: pointer;
+    clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+    transition: all 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+
+  .dq-button:hover {
+    background: #ff607d;
+    box-shadow: 0 0 15px rgba(255, 64, 96, 0.6);
+  }
+
+  @keyframes flash {
+    0% { opacity: 0.5; }
+    100% { opacity: 1; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dq-container">
+  <div class="dq-icon">⚠</div>
+  <h1 class="dq-title">DISQUALIFIED</h1>
+  <p class="dq-subtitle">Security Proctoring Exclusion Event</p>
+
+  <div class="dq-box">
+    <h3>Proctoring Exclusion Logged</h3>
+    <p>
+      Your account has been disqualified from participating in <strong>{{ contest.name }}</strong> due to exceeding the maximum allowed proctoring warning threshold (3 strikes).
+    </p>
+    <p style="margin-top: 12px; color: #888;">
+      Any subsequent submissions, attempts, or score changes for this contest have been frozen and invalidated. If you believe this is an error, please contact the contest administration panel.
+    </p>
+  </div>
+
+  <a href="{% url 'dashboard' %}" class="dq-button">
+    &lt; Back to Dashboard
+  </a>
+</div>
+{% endblock %}
