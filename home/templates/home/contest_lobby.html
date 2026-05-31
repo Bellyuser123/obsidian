@@ -285,15 +285,15 @@ nav {
 /* Table head */
 .matrix-head {
   display: grid;
-  grid-template-columns: 52px 1fr 80px 130px 110px;
-  gap: 0;
+  grid-template-columns: 52px 1.2fr 1fr 80px 130px 110px;
+  gap: 12px;
   padding: 10px 16px;
   background: var(--surface-2);
   border-bottom: 1px solid var(--border);
 }
 .matrix-head-cell {
   font-family: var(--mn);
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 600;
   letter-spacing: 2px;
   color: var(--text-dim);
@@ -312,8 +312,8 @@ nav {
 /* Problem row */
 .p-row {
   display: grid;
-  grid-template-columns: 52px 1fr 80px 130px 110px;
-  gap: 0;
+  grid-template-columns: 52px 1.2fr 1fr 80px 130px 110px;
+  gap: 12px;
   padding: 13px 16px;
   border-bottom: 1px solid var(--border-dim);
   align-items: center;
@@ -340,7 +340,7 @@ nav {
 /* Row cells */
 .p-id {
   font-family: var(--mn);
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--text-dim);
   letter-spacing: 1px;
@@ -348,13 +348,35 @@ nav {
 
 .p-name {
   font-family: var(--mn);
-  font-size: 12px;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--text);
   letter-spacing: 0.5px;
   padding-right: 12px;
 }
 .p-row.solved .p-name { color: var(--green); }
+
+.p-challenge-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+}
+
+.p-stats-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  justify-content: center;
+}
+
+.p-meta {
+  font-family: var(--mn);
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-dim);
+  letter-spacing: 0.5px;
+}
 
 .p-diff {
   display: flex;
@@ -370,7 +392,7 @@ nav {
 .diff-hard   .diff-pip { background: var(--red); }
 .diff-label {
   font-family: var(--mn);
-  font-size: 9.5px;
+  font-size: 10.5px;
   letter-spacing: 1px;
 }
 .diff-easy   .diff-label { color: var(--green); }
@@ -395,7 +417,7 @@ nav {
 
 .status-tag {
   font-family: var(--mn);
-  font-size: 8.5px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 1.5px;
   padding: 3px 8px;
@@ -412,7 +434,7 @@ nav {
 
 .btn-initiate {
   font-family: var(--mn);
-  font-size: 9px;
+  font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 2px;
   padding: 6px 14px;
@@ -513,20 +535,20 @@ nav {
 
 .lb-row {
   display: grid;
-  grid-template-columns: 22px 1fr auto auto;
+  grid-template-columns: 20px 1fr 28px 45px 52px;
   align-items: center;
-  gap: 10px;
-  padding: 9px 0;
+  gap: 6px;
+  padding: 8px 0;
   border-bottom: 1px solid var(--border-dim);
 }
 .lb-row:last-child { border-bottom: none; }
 
 .lb-rank {
   font-family: var(--mn);
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
   color: var(--text-dim);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
 }
 .lb-rank.gold   { color: #f5c842; }
 .lb-rank.silver { color: #aab0c0; }
@@ -534,7 +556,7 @@ nav {
 
 .lb-name {
   font-family: var(--mn);
-  font-size: 11px;
+  font-size: 9.5px;
   font-weight: 500;
   color: var(--text);
   overflow: hidden;
@@ -545,22 +567,31 @@ nav {
 
 .lb-solved {
   font-family: var(--mn);
-  font-size: 10px;
+  font-size: 9px;
   color: var(--text-dim);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   white-space: nowrap;
 }
 
 .lb-pts {
   font-family: var(--mn);
-  font-size: 11px;
+  font-size: 9.5px;
   font-weight: 600;
   color: var(--cyan);
-  letter-spacing: 1px;
+  letter-spacing: 0.5px;
   text-align: right;
   white-space: nowrap;
 }
 .lb-row:first-child .lb-pts { color: #f5c842; }
+
+.lb-time {
+  font-family: var(--mn);
+  font-size: 9px;
+  color: var(--text-mid);
+  letter-spacing: 0.5px;
+  text-align: right;
+  white-space: nowrap;
+}
 
 /* ── Blackout overlay ── */
 .blackout-block {
@@ -728,14 +759,49 @@ nav {
   .panel-right { position: static; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .matrix-head, .p-row {
     grid-template-columns: 44px 1fr 90px 100px;
+    gap: 12px;
   }
-  .p-diff-cell, .matrix-head-cell:nth-child(3) { display: none; }
+  .p-stats-cell, .p-diff-cell { display: none; }
 }
 @media (max-width: 600px) {
   .header-title { font-size: 11px; }
   .timer-display { font-size: 26px; }
   .panel-right { grid-template-columns: 1fr; }
   .lobby-hud { flex-direction: column; align-items: flex-start; gap: 10px; }
+}
+
+/* ════════════════════════════════════════
+   DETAILED LEADERBOARD PAGINATION
+   ════════════════════════════════════════ */
+.pagination-btn {
+  background: var(--surface-3);
+  border: 1px solid var(--border);
+  color: var(--text-mid);
+  padding: 6px 12px;
+  cursor: pointer;
+  font-family: var(--mn);
+  font-size: 11px;
+  transition: all 0.1s ease;
+  clip-path: var(--clip-sm);
+  user-select: none;
+}
+.pagination-btn:hover {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 8px rgba(0, 255, 229, 0.25);
+}
+.pagination-btn.active {
+  background: var(--green) !important;
+  border-color: var(--green) !important;
+  color: #0a0a0f !important;
+  font-weight: bold;
+}
+.pagination-btn.disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: not-allowed;
+  border-color: var(--border-dim);
+  color: var(--text-dim);
 }
 </style>
 {% endblock %}
@@ -813,6 +879,7 @@ nav {
         <div class="matrix-head">
           <span class="matrix-head-cell">ID</span>
           <span class="matrix-head-cell">Challenge</span>
+          <span class="matrix-head-cell p-stats-cell">Stats</span>
           <span class="matrix-head-cell p-diff-cell">Diff</span>
           <span class="matrix-head-cell center">Status</span>
           <span class="matrix-head-cell right">Action</span>
@@ -823,16 +890,26 @@ nav {
             {% if problems %}
               {% for cp in problems %}
                 {% with p=cp.problem %}
-                <div class="p-row {% if p.id in solved_problems %}solved{% elif cp.points == 0 %}locked{% endif %}">
+                <div class="p-row {% if p.id in solved_problems %}solved{% elif p.id in attempted_problems %}attempted{% elif cp.points == 0 %}locked{% endif %}">
                   <span class="p-id">#{{ forloop.counter|stringformat:"03d" }}</span>
-                  <span class="p-name">{{ p.title }}</span>
+                  <span class="p-challenge-info">
+                    <span class="p-name">{{ p.title }}</span>
+                  </span>
+                  <span class="p-stats-cell">
+                    <span class="p-meta">MAX SCORE: {{ cp.points }} PTS</span>
+                    <span class="p-meta">SUCCESS RATE: {{ cp.success_rate }}%</span>
+                  </span>
                   <div class="p-diff-cell">
                     <div class="p-diff {% if cp.difficulty == 'HARD' %}diff-hard{% elif cp.difficulty == 'MEDIUM' %}diff-medium{% else %}diff-easy{% endif %}">
                       <span class="diff-pip"></span>
                       <span class="diff-label">{% if cp.difficulty == 'MEDIUM' %}MED{% else %}{{ cp.difficulty|default:"EASY" }}{% endif %}</span>
                     </div>
                   </div>
-                  <div class="p-status"><span class="status-tag {% if p.id in solved_problems %}tag-solved{% else %}tag-unattempted{% endif %}">{% if p.id in solved_problems %}SOLVED{% else %}UNATTEMPTED{% endif %}</span></div>
+                  <div class="p-status">
+                    <span class="status-tag {% if p.id in solved_problems %}tag-solved{% elif p.id in attempted_problems %}tag-attempted{% else %}tag-unattempted{% endif %}">
+                      {% if p.id in solved_problems %}SOLVED{% elif p.id in attempted_problems %}ATTEMPTED{% else %}UNATTEMPTED{% endif %}
+                    </span>
+                  </div>
                   <div class="p-action">
                     {% if p.id in solved_problems %}
                       <a href="{% url 'problem_ide' contest.id p.id %}" class="btn-initiate">REVIEW_</a>
@@ -873,18 +950,25 @@ nav {
 
         <div class="leaderboard-list">
           {% if leaderboard %}
-            {% for entry in leaderboard %}
+            {% for entry in leaderboard|slice:":5" %}
               <div class="lb-row">
                 <span class="lb-rank {% if forloop.first %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">#{{ forloop.counter }}</span>
                 <span class="lb-name">{{ entry.username }}</span>
                 <span class="lb-solved">{{ entry.solved }}/{{ total_problems }}</span>
-                <span class="lb-pts">{{ entry.time_taken_str }}</span>
+                <span class="lb-pts">{{ entry.score|floatformat:0 }} PTS</span>
+                <span class="lb-time">{{ entry.time_taken_str }}</span>
               </div>
             {% endfor %}
           {% else %}
             <div style="padding:10px;color:var(--text-mid)">No leaderboard data yet.</div>
           {% endif %}
         </div>
+
+        {% if leaderboard %}
+        <div class="leaderboard-action" style="padding: 10px 0 0 0; text-align: center;">
+          <button class="btn-initiate" id="btnDetailedLeaderboard" style="width: 100%; font-size: 8.5px; padding: 7px 0;">DETAILED_LEADERBOARD_</button>
+        </div>
+        {% endif %}
 
         <!-- Blackout overlay (shown when .blackout is on panel-right) -->
         <div class="blackout-block">
@@ -893,12 +977,36 @@ nav {
         </div>
       </div>
 
-      <!-- My Team (commented out for solo contests; keep for future team mode) -->
-      <!--
+      {% if contest.is_team_contest %}
+      <!-- My Team -->
       <div class="telem-card">
-        ...existing team markup...
+        <div class="corner-tr"></div>
+        <div class="telem-label">// MY_TEAM</div>
+
+        <div class="team-row">
+          <div class="team-left">
+            <span class="team-status-dot dot-online"></span>
+            <span class="team-member-name">{{ request.user.username }}</span>
+            <span class="team-member-you">YOU</span>
+          </div>
+          <span class="team-score">{{ user_solved_count }} solved</span>
+        </div>
+        <div class="team-row">
+          <div class="team-left">
+            <span class="team-status-dot dot-online"></span>
+            <span class="team-member-name">hex_phantom</span>
+          </div>
+          <span class="team-score">0 solved</span>
+        </div>
+        <div class="team-row">
+          <div class="team-left">
+            <span class="team-status-dot dot-offline"></span>
+            <span class="team-member-name">null_byte_77</span>
+          </div>
+          <span class="team-score" style="color:var(--text-dim)">offline</span>
+        </div>
       </div>
-      -->
+      {% endif %}
 
     </div><!-- /panel-right -->
   </div><!-- /lobby-main -->
@@ -910,7 +1018,7 @@ nav {
   <div class="lobby-hud">
 
     <span class="hud-label">
-      ARENA_PROGRESS: <span id="hudFraction">3/10</span> SECURED
+      ARENA_PROGRESS: <span id="hudFraction">0/0</span> SECURED
     </span>
 
     <div class="hud-bar" id="hudBar">
@@ -919,15 +1027,90 @@ nav {
 
     <div class="hud-right">
       <div class="hud-score-box">
-        SCORE &nbsp;<strong id="hudScore">780</strong>&nbsp; PTS
+        SCORE &nbsp;<strong id="hudScore">{{ user_score|floatformat:0 }}</strong>&nbsp; PTS
       </div>
       <div class="v-divider" style="height:18px;"></div>
       <div class="hud-score-box">
-        RANK &nbsp;<strong style="color:var(--purple);">#12</strong>
+        RANK &nbsp;<strong style="color:var(--purple);">#{{ user_rank|default:"-" }}</strong>
       </div>
     </div>
 
   </div><!-- /lobby-hud -->
+
+  <!-- Detailed Leaderboard Modal -->
+  <div id="detailedLeaderboardModal" style="display: none; z-index: 2000; position: fixed; inset: 0; background: rgba(10, 10, 15, 0.9); backdrop-filter: blur(6px); align-items: center; justify-content: center;">
+    <div class="modal-box" style="background: var(--surface); border: 1px solid var(--border); width: 95%; max-width: 1200px; max-height: 80vh; display: flex; flex-direction: column; clip-path: var(--clip-md); box-shadow: 0 0 35px rgba(0, 255, 229, 0.15);">
+      <!-- Modal Header -->
+      <div style="padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; background: var(--surface-2);">
+        <span style="font-family: var(--mn); font-size: 12px; font-weight: bold; color: var(--cyan); letter-spacing: 2px;">// DETAILED_LEADERBOARD</span>
+        <button id="btnCloseLeaderboard" style="background: transparent; border: 1px solid var(--border); color: var(--text-mid); padding: 5px 12px; cursor: pointer; font-family: var(--mn); font-size: 10px; transition: color 0.1s, border-color 0.1s;">[ CLOSE_X ]</button>
+      </div>
+      <!-- Modal Body -->
+      <div style="flex: 1; overflow: auto; padding: 20px; background: var(--surface-2);">
+        <table id="detailedLeaderboardTable" style="width: 100%; border-collapse: collapse; text-align: left; font-family: var(--mn); font-size: 12px;">
+          <thead>
+            <tr style="border-bottom: 2px solid var(--border); color: var(--text-dim); font-size: 10px; text-transform: uppercase; letter-spacing: 1px;">
+              <th style="padding: 10px 8px; min-width: 60px;">Rank</th>
+              <th style="padding: 10px 8px; min-width: 120px;">Node Name</th>
+              <th style="padding: 10px 8px; text-align: center; min-width: 70px;">Solved</th>
+              <th style="padding: 10px 8px; text-align: right; min-width: 80px;">Score</th>
+              <th style="padding: 10px 8px; text-align: right; min-width: 90px;">Time</th>
+              {% for cp in problems %}
+                <th style="padding: 10px 8px; text-align: center; min-width: 115px;">#{{ forloop.counter|stringformat:"03d" }}</th>
+              {% endfor %}
+            </tr>
+          </thead>
+          <tbody>
+            {% if leaderboard %}
+              {% for entry in leaderboard %}
+                <tr style="border-bottom: 1px solid var(--border-dim); {% if entry.user_id == request.user.id %}background: rgba(0, 255, 229, 0.04); border-left: 2px solid var(--cyan);{% endif %}">
+                  <td style="padding: 12px 8px; font-weight: bold; {% if forloop.first %}color: #f5c842;{% elif forloop.counter == 2 %}color: #aab0c0;{% elif forloop.counter == 3 %}color: #c87a40;{% else %}color: var(--text-dim);{% endif %}">
+                    #{{ forloop.counter }}
+                  </td>
+                  <td style="padding: 12px 8px; font-weight: 500; {% if entry.user_id == request.user.id %}color: var(--cyan);{% endif %}">
+                    {{ entry.username }} {% if entry.user_id == request.user.id %}<span style="font-size:9px; color:var(--text-dim); font-weight: normal; margin-left: 4px;">(YOU)</span>{% endif %}
+                  </td>
+                  <td style="padding: 12px 8px; text-align: center; color: var(--text-dim);">
+                    {{ entry.solved }}/{{ total_problems }}
+                  </td>
+                  <td style="padding: 12px 8px; text-align: right; color: var(--cyan); font-weight: 600;">
+                    {{ entry.score|floatformat:0 }} PTS
+                  </td>
+                  <td style="padding: 12px 8px; text-align: right; color: var(--text-mid);">
+                    {{ entry.time_taken_str }}
+                  </td>
+                  {% for detail in entry.problems_details %}
+                    <td style="padding: 12px 8px; text-align: center;">
+                      {% if detail.status == 'solved' %}
+                        <div style="background: var(--green-dim); border: 1px solid rgba(57, 255, 110, 0.4); color: var(--green); padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 11px; display: inline-block; min-width: 90px; text-align: center; white-space: nowrap;">
+                          {{ detail.text }}
+                        </div>
+                      {% elif detail.status == 'attempted' %}
+                        <div style="background: var(--red-dim); border: 1px solid rgba(255, 60, 90, 0.35); color: var(--red); padding: 4px 8px; border-radius: 4px; font-weight: 600; font-size: 11px; display: inline-block; min-width: 90px; text-align: center; white-space: nowrap;">
+                          {{ detail.text }}
+                        </div>
+                      {% else %}
+                        <span style="color: var(--text-dim); opacity: 0.4; font-size: 11px;">-</span>
+                      {% endif %}
+                    </td>
+                  {% endfor %}
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="{{ total_problems|add:5 }}" style="padding: 20px 8px; text-align: center; color: var(--text-dim);">
+                  No telemetry entries detected.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+      <!-- Modal Footer (Pagination) -->
+      <div id="leaderboardPaginationContainer" style="padding: 16px 20px; border-top: 1px solid var(--border); display: flex; justify-content: center; align-items: center; background: var(--surface-2); gap: 8px; font-family: var(--mn); flex-wrap: wrap;">
+      </div>
+    </div>
+  </div>
 
 </div><!-- /lobby -->
 {% endblock %}
@@ -994,6 +1177,171 @@ nav {
 
   // start ticking
   tick();
+
+  /* ═══════════════════════════════════════
+     PROGRESS HUD BAR
+  ═══════════════════════════════════════ */
+  (function buildHudBar() {
+    const bar      = document.getElementById('hudBar');
+    const fraction = document.getElementById('hudFraction');
+    if (!bar) return;
+
+    const TOTAL_PROBLEMS = {{ total_problems|default:0 }};
+    const SOLVED         = {{ user_solved_count|default:0 }};
+
+    if (fraction) {
+      fraction.innerHTML = `<span style="color:var(--cyan)">${SOLVED}</span>/${TOTAL_PROBLEMS}`;
+    }
+
+    bar.innerHTML = '';
+    for (let i = 0; i < TOTAL_PROBLEMS; i++) {
+      const block = document.createElement('div');
+      block.className = 'hud-block' + (i < SOLVED ? ' lit' : '');
+      bar.appendChild(block);
+    }
+  })();
+
+  /* ═══════════════════════════════════════
+     DETAILED LEADERBOARD MODAL
+  ═══════════════════════════════════════ */
+  const detailedModal = document.getElementById('detailedLeaderboardModal');
+  const btnDetailed = document.getElementById('btnDetailedLeaderboard');
+  const btnCloseDetailed = document.getElementById('btnCloseLeaderboard');
+
+  if (btnDetailed && detailedModal) {
+    btnDetailed.addEventListener('click', function() {
+      detailedModal.style.display = 'flex';
+    });
+  }
+  if (btnCloseDetailed && detailedModal) {
+    btnCloseDetailed.addEventListener('click', function() {
+      detailedModal.style.display = 'none';
+    });
+  }
+  if (detailedModal) {
+    detailedModal.addEventListener('click', function(e) {
+      if (e.target === detailedModal) {
+        detailedModal.style.display = 'none';
+      }
+    });
+  }
+
+  /* ═══════════════════════════════════════
+     DETAILED LEADERBOARD PAGINATION
+     ═══════════════════════════════════════ */
+  function initLeaderboardPagination() {
+    const table = document.getElementById('detailedLeaderboardTable');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+    const rows = Array.from(tbody.children).filter(tr => !tr.querySelector('td[colspan]'));
+    const totalRows = rows.length;
+    const rowsPerPage = 10;
+    const totalPages = Math.ceil(totalRows / rowsPerPage);
+
+    const container = document.getElementById('leaderboardPaginationContainer');
+    if (!container) return;
+
+    if (totalPages <= 1) {
+      container.style.display = 'none';
+      return;
+    } else {
+      container.style.display = 'flex';
+    }
+
+    let currentPage = 1;
+
+    function renderPage(page) {
+      currentPage = page;
+      rows.forEach((row, idx) => {
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = currentPage * rowsPerPage;
+        if (idx >= start && idx < end) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+
+      container.innerHTML = '';
+
+      // First (<<)
+      const btnFirst = document.createElement('button');
+      btnFirst.className = 'pagination-btn' + (currentPage === 1 ? ' disabled' : '');
+      btnFirst.innerHTML = '&lt;&lt;';
+      btnFirst.addEventListener('click', () => { if (currentPage > 1) renderPage(1); });
+      container.appendChild(btnFirst);
+
+      // Prev (<)
+      const btnPrev = document.createElement('button');
+      btnPrev.className = 'pagination-btn' + (currentPage === 1 ? ' disabled' : '');
+      btnPrev.innerHTML = '&lt;';
+      btnPrev.addEventListener('click', () => { if (currentPage > 1) renderPage(currentPage - 1); });
+      container.appendChild(btnPrev);
+
+      // Page numbers (sliding window of size 5: p - 2 to p + 2)
+      let startPage = Math.max(1, currentPage - 2);
+      let endPage = Math.min(totalPages, currentPage + 2);
+
+      if (startPage > 1) {
+        const btnPage = document.createElement('button');
+        btnPage.className = 'pagination-btn';
+        btnPage.innerText = '1';
+        btnPage.addEventListener('click', () => renderPage(1));
+        container.appendChild(btnPage);
+
+        if (startPage > 2) {
+          const dots = document.createElement('span');
+          dots.innerText = '...';
+          dots.style.color = 'var(--text-dim)';
+          dots.style.padding = '0 4px';
+          container.appendChild(dots);
+        }
+      }
+
+      for (let p = startPage; p <= endPage; p++) {
+        const btnPage = document.createElement('button');
+        btnPage.className = 'pagination-btn' + (p === currentPage ? ' active' : '');
+        btnPage.innerText = p;
+        btnPage.addEventListener('click', () => renderPage(p));
+        container.appendChild(btnPage);
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          const dots = document.createElement('span');
+          dots.innerText = '...';
+          dots.style.color = 'var(--text-dim)';
+          dots.style.padding = '0 4px';
+          container.appendChild(dots);
+        }
+
+        const btnPage = document.createElement('button');
+        btnPage.className = 'pagination-btn';
+        btnPage.innerText = totalPages;
+        btnPage.addEventListener('click', () => renderPage(totalPages));
+        container.appendChild(btnPage);
+      }
+
+      // Next (>)
+      const btnNext = document.createElement('button');
+      btnNext.className = 'pagination-btn' + (currentPage === totalPages ? ' disabled' : '');
+      btnNext.innerHTML = '&gt;';
+      btnNext.addEventListener('click', () => { if (currentPage < totalPages) renderPage(currentPage + 1); });
+      container.appendChild(btnNext);
+
+      // Last (>>)
+      const btnLast = document.createElement('button');
+      btnLast.className = 'pagination-btn' + (currentPage === totalPages ? ' disabled' : '');
+      btnLast.innerHTML = '&gt;&gt;';
+      btnLast.addEventListener('click', () => { if (currentPage < totalPages) renderPage(totalPages); });
+      container.appendChild(btnLast);
+    }
+
+    renderPage(1);
+  }
+
+  initLeaderboardPagination();
 
 })();
 </script>

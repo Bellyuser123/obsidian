@@ -13,6 +13,8 @@ from .rule_checker import check_rules
 from django.db.utils import OperationalError
 from django.http import JsonResponse
 from django.urls import reverse
+from django.core.cache import cache
+from .tasks import judge_submission, run_code_task
 import json
 
 def auth_view(request):
@@ -132,6 +134,20 @@ def contest_lobby(request, contest_id):
         # Get all submissions for this contest to process leaderboard in-memory
         all_subs = Submission.objects.filter(contest=contest).select_related('user', 'problem')
         
+        # Sort all submissions chronologically to calculate attempts/solved correctly
+        sorted_subs = sorted(list(all_subs), key=lambda s: s.time_submitted)
+        
+        # Group submissions by (user_id, problem_id)
+        subs_by_user_prob = {}
+        for sub in sorted_subs:
+            key = (sub.user.id, sub.problem.id)
+            if key not in subs_by_user_prob:
+                subs_by_user_prob[key] = []
+            subs_by_user_prob[key].append(sub)
+
+        # Get contest problem IDs in order
+        problem_ids = [cp.problem.id for cp in problems]
+
         user_data = {}
         for sub in all_subs:
             uid = sub.user.id
@@ -172,6 +188,51 @@ def contest_lobby(request, contest_id):
             total_score = sum(p['score'] for p in uinfo['problems'].values())
             total_time = sum(p['time_taken'] for p in uinfo['problems'].values())
             
+            # Now build details for each problem in contest order
+            prob_details = []
+            for pid in problem_ids:
+                subs = subs_by_user_prob.get((uid, pid), [])
+                attempts = 0
+                failed_before_ac = 0
+                is_solved = False
+                first_ac_sub = None
+                
+                for sub in subs:
+                    attempts += 1
+                    if sub.is_accepted:
+                        is_solved = True
+                        first_ac_sub = sub
+                        break
+                    else:
+                        if sub.status not in ['AC', 'PARTIAL']:
+                            failed_before_ac += 1
+                
+                if attempts > 0:
+                    if is_solved and first_ac_sub:
+                        penalty = failed_before_ac * contest.penalty_minutes
+                        solve_time_mins = max(0.0, (first_ac_sub.total_time_taken or 0.0) - penalty)
+                        
+                        # format solve_time_mins as MM:SS
+                        total_secs = int(round(solve_time_mins * 60))
+                        m = total_secs // 60
+                        s = total_secs % 60
+                        time_str = f"{m}:{str(s).zfill(2)}"
+                        
+                        prob_details.append({
+                            'status': 'solved',
+                            'text': f"{attempts} ({time_str} + {penalty})",
+                        })
+                    else:
+                        prob_details.append({
+                            'status': 'attempted',
+                            'text': f"{attempts} (0:00 + 0)",
+                        })
+                else:
+                    prob_details.append({
+                        'status': 'empty',
+                        'text': '',
+                    })
+
             # Format time taken (total_time is in minutes)
             def fmt(mins):
                 if mins <= 0:
@@ -189,6 +250,7 @@ def contest_lobby(request, contest_id):
                 'score': total_score,
                 'time_taken': total_time,
                 'time_taken_str': fmt(total_time),
+                'problems_details': prob_details,
             })
             
         # Sort by solved DESC, then score DESC, then time_taken ASC
@@ -198,17 +260,82 @@ def contest_lobby(request, contest_id):
         solved_problems = list(Submission.objects.filter(
             user=request.user, contest=contest, is_accepted=True
         ).values_list('problem__id', flat=True).distinct()) if request.user.is_authenticated else []
+
+        # User's attempted problems for marking rows
+        attempted_problems = list(UserProblemSession.objects.filter(
+            user=request.user, contest=contest
+        ).values_list('problem__id', flat=True).distinct()) if request.user.is_authenticated else []
+
+        # Compute in-memory success rate per problem
+        problem_stats = {}
+        for sub in all_subs:
+            pid = sub.problem.id
+            if pid not in problem_stats:
+                problem_stats[pid] = {'total': 0, 'accepted': 0}
+            problem_stats[pid]['total'] += 1
+            if sub.is_accepted:
+                problem_stats[pid]['accepted'] += 1
+
+        for cp in problems:
+            stats = problem_stats.get(cp.problem.id, {'total': 0, 'accepted': 0})
+            if stats['total'] > 0:
+                cp.success_rate = round((stats['accepted'] / stats['total']) * 100, 1)
+            else:
+                cp.success_rate = 0.0
+
+        # Calculate current user stats
+        user_score = 0
+        user_solved_count = len(solved_problems)
+        user_rank = "-"
+        if request.user.is_authenticated:
+            for rank, entry in enumerate(leaderboard, start=1):
+                if entry['user_id'] == request.user.id:
+                    user_score = entry['score']
+                    user_rank = rank
+                    user_solved_count = entry['solved']
+                    break
+            else:
+                user_score = 0
+                user_solved_count = 0
+                user_rank = len(leaderboard) + 1
+
     except OperationalError:
         # Submission table doesn't exist (migrations not applied) — fallback to dummy leaderboard
         import datetime
         now = timezone.now()
         # Dummy leaderboard with time_taken (seconds) and formatted string
         leaderboard = [
-            {'user_id': 1, 'username': 'cipher_null', 'solved': 7, 'time_taken': 2*3600+14*60+55, 'time_taken_str': '2:14:55'},
-            {'user_id': 2, 'username': 'voidwalker_x', 'solved': 6, 'time_taken': 3*3600+5*60+12, 'time_taken_str': '3:05:12'},
-            {'user_id': 3, 'username': 'obsidian_dev', 'solved': 5, 'time_taken': 4*3600+22*60+8, 'time_taken_str': '4:22:08'},
+            {'user_id': 1, 'username': 'cipher_null', 'solved': 7, 'time_taken': 2*3600+14*60+55, 'time_taken_str': '02:14:55', 'score': 700},
+            {'user_id': 2, 'username': 'voidwalker_x', 'solved': 6, 'time_taken': 3*3600+5*60+12, 'time_taken_str': '03:05:12', 'score': 600},
+            {'user_id': 3, 'username': 'obsidian_dev', 'solved': 5, 'time_taken': 4*3600+22*60+8, 'time_taken_str': '04:22:08', 'score': 500},
         ]
+        for entry in leaderboard:
+            entry['problems_details'] = []
+            for i, cp in enumerate(problems):
+                if i < entry['solved']:
+                    entry['problems_details'].append({
+                        'status': 'solved',
+                        'text': f"1 ({i*10+5}:00 + 0)",
+                    })
+                elif i == entry['solved']:
+                    entry['problems_details'].append({
+                        'status': 'attempted',
+                        'text': "2 (0:00 + 0)",
+                    })
+                else:
+                    entry['problems_details'].append({
+                        'status': 'empty',
+                        'text': "",
+                    })
         solved_problems = []
+        attempted_problems = []
+        user_score = 0
+        user_solved_count = 0
+        user_rank = "-"
+        for cp in problems:
+            cp.success_rate = 0.0
+
+
 
     context = {
         'contest': contest,
@@ -220,8 +347,12 @@ def contest_lobby(request, contest_id):
         'contest_end_unix': int(contest.end_time.timestamp()),
         'total_problems': total_problems,
         'solved_problems': solved_problems,
+        'attempted_problems': attempted_problems,
         'leaderboard': leaderboard,
         'tags': tags,
+        'user_score': user_score,
+        'user_rank': user_rank,
+        'user_solved_count': user_solved_count,
     }
     # Render the contest lobby template with contest data
     return render(request, 'home/contest_lobby.html', context)
@@ -371,29 +502,21 @@ def handle_submission(request, contest_id, problem_id):
 
     if action_type == 'RUN':
         is_custom = data.get('is_custom', False)
-        
-        if is_custom:
-            custom_input = data.get('custom_input', '')
-            
-            # Create a mock TestCase-like object for the batch judge
-            class MockTestCase:
-                def __init__(self, id, input_data):
-                    self.id = id
-                    self.input_data = input_data
-                    self.expected_output = ''
-            
-            results = judge_problem(code, language, [MockTestCase('custom', custom_input)], stop_on_fail=False)
-            return JsonResponse({'ok': True, 'results': results, 'type': 'custom', 'custom_input': custom_input})
-            
-        else:
-            # Retrieve sample test cases
-            sample_cases = problem.testcases.filter(is_sample=True).order_by('id')
-            if not sample_cases.exists():
-                return JsonResponse({'ok': False, 'error': 'No sample test cases configured.'})
-                
-            # Evaluate without stopping on first failure so user sees all samples
-            results = judge_problem(code, language, sample_cases, stop_on_fail=False)
-            return JsonResponse({'ok': True, 'results': results, 'type': 'run'})
+        custom_input = data.get('custom_input', '') if is_custom else ''
+
+        cache_key = f"run_status_{request.user.id}_{problem.id}"
+        cache.set(cache_key, {
+            "status": "PENDING",
+            "ok": True
+        }, timeout=300)
+
+        run_code_task.delay(request.user.id, problem.id, code, language_slug, is_custom, custom_input)
+
+        return JsonResponse({
+            'ok': True,
+            'status': 'PENDING',
+            'type': 'run'
+        })
     elif action_type == 'SUBMIT':
         submission = Submission.objects.create(
             user=request.user,
@@ -405,105 +528,177 @@ def handle_submission(request, contest_id, problem_id):
             is_accepted=False
         )
         
-        # Evaluate against ALL test cases
-        all_cases = problem.testcases.all().order_by('id')
-        if not all_cases.exists():
-            submission.status = 'RE'
-            submission.save()
-            return JsonResponse({'ok': False, 'error': 'No test cases configured for this problem'})
-            
-        results = judge_problem(code, language, all_cases, stop_on_fail=False)
-        
-        # Calculate execution stats
-        max_time = 0.0
-        max_mem = 0
-        passed_count = 0
-        total_count = all_cases.count()
-        
-        for r in results:
-            if r['status'] == 'pass':
-                passed_count += 1
-            try:
-                t = float(r.get('time', '0s').replace('s', ''))
-                if t > max_time: max_time = t
-            except ValueError:
-                pass
-            m = r.get('mem_kb', 0)
-            if m > max_mem: max_mem = m
+        # Populate initial cache for polling to consume immediately
+        import time
+        cache.set(f"sub_status_{submission.id}", {
+            "status": "PENDING",
+            "user_id": request.user.id,
+            "created_at": time.time(),
+            "ok": True
+        }, timeout=300)
 
-        # Determine final status
-        if total_count == 0:
-             final_status = 'RE'
-             is_accepted = False
-        elif passed_count == total_count:
-             final_status = 'AC'
-             is_accepted = True
-        elif passed_count > 0:
-             final_status = 'PARTIAL'
-             is_accepted = False
-        else:
-             is_accepted = False
-             first_fail = next((r for r in results if r['status'] != 'pass'), None)
-             if first_fail:
-                 reverse_map = {'WRONG ANSWER': 'WA', 'TIME LIMIT': 'TLE', 'RUNTIME ERROR': 'RE', 'COMPILE ERROR': 'CE'}
-                 final_status = reverse_map.get(first_fail['label'], 'RE')
-             else:
-                 final_status = 'RE'
-                 
-        # Calculate Score
-        cp = ContestProblem.objects.filter(contest=contest, problem=problem).first()
-        points_available = cp.points if cp else 0
-        base_score = (passed_count / total_count) * points_available if total_count > 0 else 0
-        
-        # Calculate Time & Penalties
-        session = UserProblemSession.objects.filter(user=request.user, contest=contest, problem=problem).first()
-        time_diff_minutes = (timezone.now() - session.first_opened_at).total_seconds() / 60.0 if session else 0.0
-        
-        # Count previous non-AC submissions for this problem to apply penalty
-        failed_count = Submission.objects.filter(
-            user=request.user, contest=contest, problem=problem
-        ).exclude(id=submission.id).exclude(status__in=['AC', 'PARTIAL']).count()
-        
-        penalty_time = failed_count * contest.penalty_minutes
-        
-        submission.status = final_status
-        submission.is_accepted = is_accepted
-        submission.score_awarded = base_score
-        submission.total_time_taken = time_diff_minutes + penalty_time
-        submission.execution_time = max_time
-        submission.memory_used = max_mem
-        submission.save()
-        
-        # Update Profile Score (only add the difference if they improved)
-        from django.db.models import Max
-        best_previous = Submission.objects.filter(
-            user=request.user, contest=contest, problem=problem
-        ).exclude(id=submission.id).aggregate(Max('score_awarded'))['score_awarded__max']
-        
-        best_previous = best_previous or 0.0
-        
-        if base_score > best_previous:
-            diff = base_score - best_previous
-            profile = request.user.profile
-            profile.total_score += int(diff)
-            profile.save()
-        
-        # Scrub hidden test cases before returning
-        for idx, tc in enumerate(all_cases):
-            if not tc.is_sample:
-                # results is 0-indexed, up to len(results)
-                if idx < len(results):
-                    results[idx]['expected'] = 'Hidden Test Case'
-                    results[idx]['stdout'] = 'Hidden Test Case Output'
-            
-        return JsonResponse({'ok': True, 'results': results, 'type': 'submit'})
+        # Trigger background Celery task
+        judge_submission.delay(submission.id)
+
+        return JsonResponse({
+            'ok': True,
+            'submission_id': submission.id,
+            'status': 'PENDING',
+            'type': 'submit'
+        })
     else:
         return JsonResponse({'ok': False, 'error': 'Invalid action type'}, status=400)
 
 
 @login_required
+def submission_status_api(request, submission_id):
+    """
+    Returns the execution status and results of a submission.
+    Uses Redis cache to prevent high database query loads (polling storms mitigation).
+    If a pending/running submission is older than 2 minutes, it is marked as failed (orphaned execution cleanup).
+    """
+    import time
+    cache_key = f"sub_status_{submission_id}"
+    status_data = cache.get(cache_key)
+    
+    if status_data:
+        # Validate ownership check
+        user_id = status_data.get('user_id')
+        if user_id and user_id != request.user.id and not request.user.is_staff:
+            return JsonResponse({'ok': False, 'error': 'Access denied'}, status=403)
+            
+        status = status_data.get('status')
+        created_at = status_data.get('created_at')
+        
+        # 1. If the status is resolved, serve directly from cache
+        if status not in ['PENDING', 'RUNNING']:
+            return JsonResponse(status_data)
+            
+        # 2. If it is PENDING or RUNNING but less than 120 seconds old, serve from cache
+        if created_at and time.time() - created_at < 120:
+            return JsonResponse(status_data)
+        
+    try:
+        submission = Submission.objects.select_related('problem', 'language').get(id=submission_id)
+    except Submission.DoesNotExist:
+        return JsonResponse({'ok': False, 'error': 'Submission not found'}, status=404)
+        
+    if submission.user != request.user and not request.user.is_staff:
+        return JsonResponse({'ok': False, 'error': 'Access denied'}, status=403)
+        
+    # Check if the submission is stuck/orphaned in PENDING/RUNNING (older than 120 seconds)
+    import datetime
+    from django.utils import timezone
+    if submission.status in ['PENDING', 'RUNNING'] and submission.time_submitted < timezone.now() - datetime.timedelta(minutes=2):
+        submission.status = 'RE'
+        submission.error_message = "System error: execution orphaned (stuck in queue/runner lost)."
+        submission.save()
+        
+        # Build fake SYSTEM ERROR terminal results and cache it
+        results = [{
+            'id': '00',
+            'status': 'fail',
+            'label': 'SYSTEM ERROR',
+            'stdout': '',
+            'stderr': submission.error_message,
+            'expected': '',
+            'time': '0.000s'
+        }]
+        status_data = {
+            "status": "RE",
+            "is_accepted": False,
+            "score": 0.0,
+            "execution_time": 0.0,
+            "memory_used": 0,
+            "error_message": submission.error_message,
+            "results": results,
+            "user_id": submission.user_id,
+            "ok": True
+        }
+        cache.set(cache_key, status_data, timeout=300)
+        return JsonResponse(status_data)
+        
+    # If it is still pending/running but not stuck yet, return the state
+    if submission.status in ['PENDING', 'RUNNING']:
+        if not status_data:
+            status_data = {
+                "status": submission.status,
+                "user_id": submission.user_id,
+                "created_at": submission.time_submitted.timestamp(),
+                "ok": True
+            }
+            cache.set(cache_key, status_data, timeout=300)
+        return JsonResponse(status_data)
+        
+    # Build resolved status data if DB shows resolved but cache was missing/expired
+    results = []
+    if submission.status in ['CE', 'RE', 'WA', 'TLE', 'AC', 'PARTIAL']:
+        results = [{
+            'id': '00',
+            'status': 'pass' if submission.is_accepted else 'fail',
+            'label': submission.status,
+            'stdout': '',
+            'stderr': submission.error_message or '',
+            'expected': '',
+            'time': f"{submission.execution_time:.3f}s"
+        }]
+
+    status_data = {
+        "status": submission.status,
+        "is_accepted": submission.is_accepted,
+        "score": float(submission.score_awarded),
+        "execution_time": float(submission.execution_time),
+        "memory_used": int(submission.memory_used),
+        "error_message": submission.error_message or '',
+        "results": results,
+        "ok": True
+    }
+    
+    cache.set(cache_key, status_data, timeout=300)
+    return JsonResponse(status_data)
+
+
+@login_required
 def submission_history_api(request, contest_id, problem_id):
     """Returns JSON history of user's submissions for a specific problem."""
+    # Clean up any stuck submissions in history older than 2 minutes
+    import datetime
+    from django.utils import timezone
+    cutoff = timezone.now() - datetime.timedelta(minutes=2)
+    stuck_submissions = Submission.objects.filter(
+        user=request.user,
+        contest_id=contest_id,
+        problem_id=problem_id,
+        status__in=['PENDING', 'RUNNING'],
+        time_submitted__lt=cutoff
+    )
+    for sub in stuck_submissions:
+        sub.status = 'RE'
+        sub.error_message = "System error: execution orphaned (stuck in queue/runner lost)."
+        sub.save()
+        
+        # Sync to Redis cache
+        cache_key = f"sub_status_{sub.id}"
+        results = [{
+            'id': '00',
+            'status': 'fail',
+            'label': 'SYSTEM ERROR',
+            'stdout': '',
+            'stderr': sub.error_message,
+            'expected': '',
+            'time': '0.000s'
+        }]
+        cache.set(cache_key, {
+            "status": "RE",
+            "is_accepted": False,
+            "score": 0.0,
+            "execution_time": 0.0,
+            "memory_used": 0,
+            "error_message": sub.error_message,
+            "results": results,
+            "ok": True
+        }, timeout=300)
+
     submissions = Submission.objects.filter(
         user=request.user, contest_id=contest_id, problem_id=problem_id
     ).order_by('-time_submitted')
@@ -524,3 +719,18 @@ def submission_history_api(request, contest_id, problem_id):
         })
         
     return JsonResponse({'ok': True, 'submissions': data})
+
+
+@login_required
+def run_status_api(request, problem_id):
+    """
+    Returns the execution status and results of a diagnostic run code execution.
+    Reads directly from Redis Cache to prevent web thread blockage.
+    """
+    cache_key = f"run_status_{request.user.id}_{problem_id}"
+    status_data = cache.get(cache_key)
+    if status_data:
+        return JsonResponse(status_data)
+        
+    return JsonResponse({'ok': False, 'error': 'Run status not found'}, status=404)
+

@@ -1433,6 +1433,38 @@
     border: 1px solid rgba(45, 255, 138, 0.3);
   }
 
+  .sub-pending {
+    color: var(--cyan-text);
+    background: var(--cyan-dim);
+    border: 1px solid var(--cyan-mid);
+    position: relative;
+    padding-left: 20px !important;
+  }
+
+  .sub-pending::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    margin-top: -3px;
+    border-radius: 50%;
+    background-color: var(--cyan);
+    animation: sub-pending-pulse 1s infinite alternate;
+  }
+
+  @keyframes sub-pending-pulse {
+    0% {
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    100% {
+      transform: scale(1.3);
+      opacity: 1;
+    }
+  }
+
   .sub-wa {
     color: var(--red);
     background: var(--red-dim);
@@ -2551,17 +2583,27 @@
         const [response] = await Promise.all([fetchPromise, minDelayPromise]);
 
         const data = await response.json();
-        hideOverlay();
 
         if (data.ok) {
           if (type === 'RUN') {
-            console.log("Run testing success:", data);
-            showResultTerminal(data.results, data.type, data.custom_input);
+            console.log("Run queued:", data);
+            pollRunStatus({{ problem.id }});
           } else {
-            console.log("Submission success:", data);
-            showResultTerminal(data.results, 'submit');
+            // It's SUBMIT. Check if we already have results (pre-flight rule violation check)
+            if (data.results) {
+              hideOverlay();
+              console.log("Submission resolved early (pre-flight check):", data);
+              showResultTerminal(data.results, 'submit');
+            } else if (data.submission_id) {
+              console.log("Submission queued:", data);
+              pollSubmissionStatus(data.submission_id);
+            } else {
+              hideOverlay();
+              alert("Error: No submission ID returned from server.");
+            }
           }
         } else {
+          hideOverlay();
           alert("Error: " + data.error);
         }
       } catch (error) {
@@ -2569,6 +2611,126 @@
         console.error("Error:", error);
         alert("Network error occurred.");
       }
+    }
+
+    async function pollRunStatus(problemId) {
+      const url = `/run/${problemId}/status/`;
+      const interval = 800; // Poll every 800ms
+      
+      const poll = async () => {
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          
+          if (data.ok) {
+            if (data.status === 'PENDING' || data.status === 'RUNNING') {
+              showOverlay(data.status + '...');
+              setTimeout(poll, interval);
+            } else if (data.status === 'SUCCESS') {
+              hideOverlay();
+              console.log("Run testing success:", data);
+              showResultTerminal(data.results, data.type, data.custom_input);
+            } else {
+              hideOverlay();
+              alert("Error running code: " + (data.error || "Unknown error"));
+            }
+          } else {
+            hideOverlay();
+            alert("Error retrieving run status: " + data.error);
+          }
+        } catch (error) {
+          hideOverlay();
+          console.error("Polling error:", error);
+          alert("Network error while waiting for run status.");
+        }
+      };
+      
+      setTimeout(poll, interval);
+    }
+
+    async function pollSubmissionStatus(submissionId) {
+      const url = `/submission/${submissionId}/status/`;
+      const interval = 800; // Poll every 800ms
+      let pollCount = 0;
+      const maxPolls = 100; // Stop polling after 80 seconds
+      
+      const poll = async () => {
+        pollCount++;
+        if (pollCount > maxPolls) {
+          hideOverlay();
+          alert("Submission processing is taking longer than expected. Please check the Submissions tab for updates.");
+          return;
+        }
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          
+          if (data.ok) {
+            if (data.status === 'PENDING' || data.status === 'RUNNING') {
+              showOverlay(data.status + '...');
+              setTimeout(poll, interval);
+            } else {
+              hideOverlay();
+              console.log("Verdict resolved:", data);
+              showResultTerminal(data.results, 'submit');
+              submissionsLoaded = false;
+              fetchSubmissions();
+            }
+          } else {
+            hideOverlay();
+            alert("Error retrieving verdict: " + data.error);
+          }
+        } catch (error) {
+          hideOverlay();
+          console.error("Polling error:", error);
+          alert("Network error while waiting for verdict.");
+        }
+      };
+      
+      setTimeout(poll, interval);
+    }
+
+    window.activePolls = window.activePolls || new Set();
+
+    async function pollSubmissionStatusBackground(submissionId) {
+      if (window.activePolls.has(submissionId)) return;
+      window.activePolls.add(submissionId);
+
+      const url = `/submission/${submissionId}/status/`;
+      const interval = 800; // Poll every 800ms
+      let pollCount = 0;
+      const maxPolls = 100; // Stop polling after 80 seconds
+      
+      const poll = async () => {
+        pollCount++;
+        if (pollCount > maxPolls) {
+          console.log("Background polling timed out for submission:", submissionId);
+          window.activePolls.delete(submissionId);
+          return;
+        }
+        try {
+          const res = await fetch(url);
+          const data = await res.json();
+          
+          if (data.ok) {
+            if (data.status === 'PENDING' || data.status === 'RUNNING') {
+              setTimeout(poll, interval);
+            } else {
+              console.log("Background verdict resolved:", data);
+              window.activePolls.delete(submissionId);
+              submissionsLoaded = false;
+              fetchSubmissions();
+            }
+          } else {
+            window.activePolls.delete(submissionId);
+          }
+        } catch (error) {
+          console.error("Background polling error:", error);
+          window.activePolls.delete(submissionId);
+        }
+      };
+      
+      setTimeout(poll, interval);
     }
 
     function runCode() {
@@ -2627,6 +2789,16 @@
             else if (sub.status === 'TLE') { statusClass = 'sub-tle'; label = 'TIME LIMIT'; }
             else if (sub.status === 'CE') { statusClass = 'sub-ce'; label = 'COMPILE ERR'; }
             else if (sub.status === 'RE') { statusClass = 'sub-wa'; label = 'RUNTIME ERR'; }
+            else if (sub.status === 'PENDING') {
+              statusClass = 'sub-pending';
+              label = 'PENDING';
+              pollSubmissionStatusBackground(sub.id);
+            }
+            else if (sub.status === 'RUNNING') {
+              statusClass = 'sub-pending';
+              label = 'RUNNING';
+              pollSubmissionStatusBackground(sub.id);
+            }
             else { label = 'WRONG ANSWER'; }
 
             const tr = document.createElement('tr');

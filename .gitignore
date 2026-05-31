@@ -1,5 +1,5 @@
-.venv/
+.venv312/
+.idea/
 __pycache__/
 *.pyc
-db.sqlite3
-tree-sitter/parser
+scratch/

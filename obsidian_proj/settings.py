@@ -72,13 +72,32 @@ WSGI_APPLICATION = 'obsidian_proj.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+# Temporarily turn SQLite back on to read the local file
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'dj_db_conn_pool.backends.postgresql',
+        'NAME': 'defaultdb',
+        'USER': 'avnadmin',
+        'PASSWORD': 'AVNS_vlgA7LSpKGsNuua7kLs',
+        'HOST': 'obsi-2049-boudhik-78b4.j.aivencloud.com',
+        'PORT': '23954',
+
+        'POOL_OPTIONS': {
+            'POOL_SIZE': 6,
+            'MAX_OVERFLOW': 2,
+            'RECYCLE': 300,
+        },
+        'OPTIONS': {
+            'sslmode': 'require',
+            'connect_timeout': 10,
+        },
+        'DISABLE_SERVER_SIDE_CURSORS': True,
     }
 }
+
+# Bypasses Postgres entirely for student authentication checks
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
 
 
 # Password validation
@@ -121,3 +140,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # settings.py
 LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = 'home'
+
+# Celery Configuration
+CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC'
+
+# Redis Caching Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        }
+    }
+}
+
+# Container runner engine (can be 'podman' or 'docker')
+CONTAINER_RUNNER = 'podman'

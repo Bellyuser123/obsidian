@@ -12,4 +12,6 @@ urlpatterns = [
     path('contest/<int:contest_id>/problem/<int:problem_id>/ide/', views.problem_ide_view, name='problem_ide'),
     path('contest/<int:contest_id>/problem/<int:problem_id>/submit/', views.handle_submission, name='handle_submission'),
     path('contest/<int:contest_id>/problem/<int:problem_id>/submissions_api/', views.submission_history_api, name='submission_history_api'),
+    path('submission/<int:submission_id>/status/', views.submission_status_api, name='submission_status_api'),
+    path('run/<int:problem_id>/status/', views.run_status_api, name='run_status_api'),
 ]

@@ -15,3 +15,7 @@ tree-sitter-c
 tree-sitter-javascript
 tree-sitter-go
 tree-sitter-rust
+celery
+redis
+django-redis
+psycopg2-binary

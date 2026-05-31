@@ -30,7 +30,11 @@ class LanguageAdmin(admin.ModelAdmin):
 class TestCaseInline(admin.TabularInline):
     model = TestCase
     extra = 1
-    fields = ('input_data', 'expected_output', 'is_sample', 'explanation')
+    fields = (
+        'input_data', 'input_file', 'input_filename', 'input_format',
+        'expected_output', 'output_file', 'output_filename', 'output_format',
+        'is_sample', 'explanation', 'weight'
+    )
 
 
 class ProblemRuleInline(admin.TabularInline):
@@ -61,7 +65,7 @@ class ProblemAdmin(admin.ModelAdmin):
     )
 
     class Media:
-        js = ('js/admin_filter.js',)
+        js = ('home/js/admin_filter.js',)
 
     def get_contests(self, obj):
         return ", ".join([c.name for c in obj.contests.all()])
@@ -74,9 +78,9 @@ class ContestProblemInline(admin.TabularInline):
 
 
 class ContestAdmin(admin.ModelAdmin):
-    list_display = ('name', 'start_time', 'end_time', 'passkey', 'prize')
+    list_display = ('name', 'start_time', 'end_time', 'passkey', 'is_team_contest', 'prize')
     search_fields = ('name', 'description', 'tags')
-    list_filter = ('start_time', 'end_time')
+    list_filter = ('start_time', 'end_time', 'is_team_contest')
     inlines = [ContestProblemInline]
 
 
@@ -96,7 +100,7 @@ class SubmissionAdmin(admin.ModelAdmin):
         return False
 
     def has_delete_permission(self, request, obj=None):
-        return False
+        return True
 
 
 class UserProblemSessionAdmin(admin.ModelAdmin):
