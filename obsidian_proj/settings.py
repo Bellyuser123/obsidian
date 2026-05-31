@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -79,7 +80,7 @@ DATABASES = {
         'ENGINE': 'dj_db_conn_pool.backends.postgresql',
         'NAME': 'defaultdb',
         'USER': 'avnadmin',
-        'PASSWORD': 'AVNS_vlgA7LSpKGsNuua7kLs',
+        'PASSWORD': os.getenv('AIVEN_DB_PASSWORD', 'fallback_local_pass'),
         'HOST': 'obsi-2049-boudhik-78b4.j.aivencloud.com',
         'PORT': '23954',
 
