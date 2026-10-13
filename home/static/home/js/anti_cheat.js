@@ -117,14 +117,15 @@
             modal.style.width = '100vw';
             modal.style.height = '100vh';
             modal.style.background = 'rgba(10, 10, 15, 0.98)';
-            modal.style.zIndex = '99999';
+            modal.style.zIndex = '99990';
+            modal.style.cursor = 'none';
             modal.style.display = 'flex';
             modal.style.alignItems = 'center';
             modal.style.justifyContent = 'center';
             modal.style.fontFamily = "'JetBrains Mono', monospace";
             
             modal.innerHTML = `
-                <div style="max-width: 500px; padding: 30px; background: #12121f; border: 1px solid #ff4060; text-align: center; color: #fff; box-shadow: 0 0 25px rgba(255,64,96,0.3); clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));">
+                <div style="max-width: 500px; padding: 30px; background: #12121f; border: 1px solid #ff4060; text-align: center; color: #fff; box-shadow: 0 0 25px rgba(255,64,96,0.3); clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); cursor: none !important;">
                     <h2 style="font-family: 'Press Start 2P', monospace; font-size: 14px; color: #ff4060; margin-bottom: 20px; letter-spacing: 2px;">PROCTOR WARNING</h2>
                     <p style="font-size: 13px; line-height: 1.6; margin-bottom: 20px;">
                         Infraction detected: Window switch, focus loss, or fullscreen exit. 
@@ -133,7 +134,7 @@
                     <div id="proctor-strikes-label" style="font-family: 'Press Start 2P', monospace; font-size: 11px; padding: 10px; background: rgba(255,64,96,0.1); border: 1px dashed rgba(255,64,96,0.3); margin-bottom: 25px; color: #ff4060;">
                         STRIKES: ${currentStrikes} / 3
                     </div>
-                    <button id="resume-proctor-btn" style="font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 12px 24px; background: #ff4060; color: #110808; border: none; cursor: pointer; clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px)); font-weight: bold;">
+                    <button id="resume-proctor-btn" style="font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 12px 24px; background: #ff4060; color: #110808; border: none; cursor: none !important; clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px)); font-weight: bold;">
                         RESUME CONTEST
                     </button>
                 </div>
@@ -146,8 +147,14 @@
             modal.style.display = 'flex';
         }
         
+        document.body.classList.add('proctored-active');
         const workspace = document.querySelector('main');
         if (workspace) workspace.style.filter = 'blur(10px) brightness(0.2)';
+        
+        const cursor = document.getElementById('cursor') || document.getElementById('custom-cursor');
+        if (cursor && cursor.parentElement === document.body) {
+            document.body.appendChild(cursor);
+        }
     }
 
     function hideWarningModal() {
@@ -169,19 +176,20 @@
             modal.style.width = '100vw';
             modal.style.height = '100vh';
             modal.style.background = 'rgba(10, 10, 15, 0.98)';
-            modal.style.zIndex = '99998';
+            modal.style.zIndex = '99990';
+            modal.style.cursor = 'none';
             modal.style.display = 'flex';
             modal.style.alignItems = 'center';
             modal.style.justifyContent = 'center';
             modal.style.fontFamily = "'JetBrains Mono', monospace";
 
             modal.innerHTML = `
-                <div style="max-width: 500px; padding: 30px; background: #12121f; border: 1px solid var(--cyan); text-align: center; color: #fff; box-shadow: 0 0 25px rgba(0,229,204,0.3); clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));">
+                <div style="max-width: 500px; padding: 30px; background: #12121f; border: 1px solid var(--cyan); text-align: center; color: #fff; box-shadow: 0 0 25px rgba(0,229,204,0.3); clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px)); cursor: none !important;">
                     <h2 style="font-family: 'Press Start 2P', monospace; font-size: 12px; color: var(--cyan); margin-bottom: 20px; letter-spacing: 2px;">FULLSCREEN REQUIRED</h2>
                     <p style="font-size: 13px; line-height: 1.6; margin-bottom: 25px;">
                         You must enter fullscreen mode to access the contest space. Exiting fullscreen mode during the contest constitutes an infraction.
                     </p>
-                    <button id="enter-fullscreen-btn" style="font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 12px 24px; background: var(--cyan); color: #110808; border: none; cursor: pointer; clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px)); font-weight: bold;">
+                    <button id="enter-fullscreen-btn" style="font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 12px 24px; background: var(--cyan); color: #110808; border: none; cursor: none !important; clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px)); font-weight: bold;">
                         ENTER FULLSCREEN
                     </button>
                 </div>
@@ -193,8 +201,15 @@
             modal.style.display = 'flex';
         }
         
+        document.body.classList.add('proctored-active');
+        
         const workspace = document.querySelector('main');
         if (workspace) workspace.style.filter = 'blur(10px) brightness(0.2)';
+
+        const cursor = document.getElementById('cursor') || document.getElementById('custom-cursor');
+        if (cursor && cursor.parentElement === document.body) {
+            document.body.appendChild(cursor);
+        }
     }
 
     function hideFullscreenModal() {

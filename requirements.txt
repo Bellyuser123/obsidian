@@ -15,7 +15,10 @@ tree-sitter-c
 tree-sitter-javascript
 tree-sitter-go
 tree-sitter-rust
+
 celery
 redis
 django-redis
+django-allauth==0.55.2
+django-db-connection-pool==1.2.6
 psycopg2-binary

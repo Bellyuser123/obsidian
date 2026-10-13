@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{% block title %}OBSIDIAN — ACM DPGU Hackathon{% endblock %}</title>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@300;400;600;700&family=VT323&display=swap" rel="stylesheet">
-<link rel="stylesheet" type="text/css" href="{% static 'home/css/style.css' %}">
+<link rel="stylesheet" type="text/css" href="{% static 'home/css/style.css' %}?v=20260814_2">
   <link rel="icon" type="image/x-icon" href="{% static 'home/favicon.ico' %}">
   <style>
   /* ── USER MENU (authenticated state) ── */
@@ -183,7 +183,7 @@
 {% block matrix_js %}
 <script src="{% static 'home/js/matrix.js' %}"></script>
 {% endblock %}
-<script src="{% static 'home/js/cursor.js' %}"></script>
+<script src="{% static 'home/js/cursor.js' %}?v=20260814_2"></script>
 
 {% block extra_js %}{% endblock %}
 <script>

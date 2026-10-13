@@ -3,18 +3,53 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator
 from django.core.exceptions import ValidationError
-
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    full_name = models.CharField(max_length=100)
-    roll_no = models.CharField(max_length=20, unique=True)
+    full_name = models.CharField(max_length=100, blank=True, null=True)
+    roll_no = models.CharField(max_length=30, blank=True, null=True, unique=True)
+    is_profile_complete = models.BooleanField(default=False)
     total_score = models.IntegerField(default=0)
     is_disqualified = models.BooleanField(default=False)
 
+    @property
+    def roll_number(self):
+        return self.roll_no
+
+    @roll_number.setter
+    def roll_number(self, value):
+        self.roll_no = value
+
     def __str__(self):
-        return f"{self.user.username} - {self.roll_no}"
+        return f"{self.user.username} - {self.roll_no or 'Incomplete'}"
+
+
+class EmailOTP(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='email_otp')
+    otp_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def is_valid(self):
+        from django.utils import timezone
+        return (timezone.now() - self.created_at).total_seconds() < 600
+
+    def __str__(self):
+        return f"OTP for {self.user.username}: {self.otp_code}"
+
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        Profile.objects.get_or_create(
+            user=instance,
+            defaults={
+                'full_name': instance.get_full_name() or instance.username,
+                'is_profile_complete': False,
+            }
+        )
 
 
 # --- NEW SUPPORT MODELS ---

@@ -12,21 +12,22 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
+load_dotenv(BASE_DIR / '.env')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-w=8uq%1uasor81cn8evy1**2%_+u9tl_csmv+t&xq-9#8#&rpb'
+SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 
 
 # Application definition
@@ -39,6 +40,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.github',
+]
+
+SITE_ID = 1
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 MIDDLEWARE = [
@@ -49,6 +63,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'obsidian_proj.urls'
@@ -78,12 +93,11 @@ WSGI_APPLICATION = 'obsidian_proj.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'dj_db_conn_pool.backends.postgresql',
-        'NAME': 'defaultdb',
-        'USER': 'avnadmin',
-        'PASSWORD': os.getenv('AIVEN_DB_PASSWORD', 'fallback_local_pass'),
-        'HOST': 'obsi-2049-boudhik-78b4.j.aivencloud.com',
-        'PORT': '23954',
-
+        'NAME': os.getenv('DB_NAME', 'defaultdb'),
+        'USER': os.getenv('DB_USER', 'avnadmin'),
+        'PASSWORD': os.getenv('DB_PASSWORD'),
+        'HOST': os.getenv('DB_HOST'),
+        'PORT': os.getenv('DB_PORT', '23954'),
         'POOL_OPTIONS': {
             'POOL_SIZE': 6,
             'MAX_OVERFLOW': 2,
@@ -139,12 +153,44 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # settings.py
-LOGIN_REDIRECT_URL = 'dashboard'
+LOGIN_REDIRECT_URL = '/check-profile/'
 LOGOUT_REDIRECT_URL = 'home'
 
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_LOGIN_ON_GET = True
+
+# Email Configuration (Resend SMTP for obsidians.codes)
+EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.smtp.EmailBackend')
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.resend.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'resend')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Obsidian Arena <noreply@obsidians.codes>')
+
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+            'key': ''
+        },
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online'},
+    },
+    'github': {
+        'APP': {
+            'client_id': os.getenv('GITHUB_CLIENT_ID'),
+            'secret': os.getenv('GITHUB_CLIENT_SECRET'),
+            'key': ''
+        },
+        'SCOPE': ['user', 'user:email'],
+    }
+}
+
 # Celery Configuration
-CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
-CELERY_RESULT_BACKEND = 'redis://127.0.0.1:6379/0'
+CELERY_BROKER_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0')
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
@@ -154,7 +200,7 @@ CELERY_TIMEZONE = 'UTC'
 CACHES = {
     'default': {
         'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',
+        'LOCATION': os.getenv('REDIS_CACHE_URL', 'redis://127.0.0.1:6379/1'),
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         }
@@ -162,4 +208,4 @@ CACHES = {
 }
 
 # Container runner engine (can be 'podman' or 'docker')
-CONTAINER_RUNNER = 'podman'
+CONTAINER_RUNNER = os.getenv('CONTAINER_RUNNER', 'podman')

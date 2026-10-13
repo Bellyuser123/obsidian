@@ -51,20 +51,25 @@ html, body {
 }
 
 /* ensure pointer hidden and custom cursor enabled on this page */
-body { cursor: none; }
+body { cursor: none !important; }
 
 /* Recreate the classic blue pixel cursor from the main site */
-.cursor {
+.cursor, #cursor, .custom-cursor, #custom-cursor {
   width: 16px; height: 16px;
-  background: var(--cyan);
+  background: #00e5cc !important;
   position: fixed;
   top: 0; left: 0;
-  pointer-events: none;
-  z-index: 9999;
+  pointer-events: none !important;
+  z-index: 2147483647 !important;
   image-rendering: pixelated;
   clip-path: polygon(0 0, 60% 0, 100% 40%, 100% 100%, 40% 100%, 0 60%);
-  transition: transform 0.1s;
-  mix-blend-mode: difference;
+  transition: transform 0.08s ease-out;
+  will-change: transform, left, top;
+  mix-blend-mode: normal !important;
+  box-shadow: 0 0 10px #00e5cc, 0 0 20px #00e5cc, 0 0 30px rgba(0, 229, 204, 0.8) !important;
+  filter: drop-shadow(0 0 8px #00e5cc) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* small decorative pixel grid and canvas (minimal) */

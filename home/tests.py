@@ -9,6 +9,10 @@ class ContestLobbyTestCase(TestCase):
     def setUp(self):
         self.client = Client()
         self.user = User.objects.create_user(username='teststudent', password='password123')
+        self.user.profile.roll_no = 'TEST_ROLL'
+        self.user.profile.roll_number = 'TEST_ROLL'
+        self.user.profile.is_profile_complete = True
+        self.user.profile.save()
         
         # Create a contest
         now = timezone.now()
@@ -277,7 +281,7 @@ class TestCaseValidationAndScoringTests(TestCase):
     def test_weighted_score_calculation(self):
         user = User.objects.create_user(username='student1', password='password123')
         from home.models import Profile
-        Profile.objects.create(user=user, full_name="Student One", roll_no="ROLL_123")
+        Profile.objects.update_or_create(user=user, defaults={'full_name': "Student One", 'roll_no': "ROLL_123", 'roll_number': "ROLL_123", 'is_profile_complete': True})
         contest = Contest.objects.create(
             name="Contest 1",
             start_time=timezone.now(),
@@ -396,7 +400,7 @@ class TestCaseValidationAndScoringTests(TestCase):
         from home.models import ViolationLog, ContestParticipation, Profile
         # 1. Register a user and log in
         user = User.objects.create_user(username='cheat_student', password='password123')
-        Profile.objects.create(user=user, full_name="Cheat Student", roll_no="CHEAT101")
+        Profile.objects.update_or_create(user=user, defaults={'full_name': "Cheat Student", 'roll_no': "CHEAT101", 'roll_number': "CHEAT101", 'is_profile_complete': True})
         self.client.login(username='cheat_student', password='password123')
 
         # 2. Create contest
@@ -447,9 +451,10 @@ class TestCaseValidationAndScoringTests(TestCase):
         self.assertEqual(ViolationLog.objects.filter(user=user, contest=contest).count(), 0)
 
     def test_anti_cheat_gatekeeper(self):
-        from home.models import ContestParticipation
+        from home.models import ContestParticipation, Profile
         # 1. Register user
         user = User.objects.create_user(username='banned_student', password='password123')
+        Profile.objects.update_or_create(user=user, defaults={'full_name': "Banned Student", 'roll_no': "BANNED101", 'roll_number': "BANNED101", 'is_profile_complete': True})
         self.client.login(username='banned_student', password='password123')
 
         # 2. Create contest and problem
@@ -491,4 +496,169 @@ class TestCaseValidationAndScoringTests(TestCase):
         self.assertEqual(r5.status_code, 200)
         r6 = self.client.get(ide_url)
         self.assertEqual(r6.status_code, 200)
+
+
+class SocialAuthAndProfileTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_user_creation_signal_creates_profile(self):
+        user = User.objects.create_user(username='oauth_user', email='oauth@example.com', password='password123')
+        self.assertTrue(hasattr(user, 'profile'))
+        self.assertFalse(user.profile.is_profile_complete)
+        self.assertIsNone(user.profile.roll_number)
+
+    def test_check_profile_status_redirects_incomplete_profile(self):
+        user = User.objects.create_user(username='incomplete_user', password='password123')
+        self.client.login(username='incomplete_user', password='password123')
+        res = self.client.get(reverse('check_profile_status'))
+        self.assertRedirects(res, reverse('complete_profile'))
+
+    def test_dashboard_redirects_incomplete_profile(self):
+        user = User.objects.create_user(username='incomplete_user', password='password123')
+        self.client.login(username='incomplete_user', password='password123')
+        res = self.client.get(reverse('dashboard'))
+        self.assertRedirects(res, reverse('complete_profile'))
+
+    def test_complete_profile_flow(self):
+        user = User.objects.create_user(username='oauth_new', password='password123')
+        self.client.login(username='oauth_new', password='password123')
+        
+        # GET complete_profile
+        res = self.client.get(reverse('complete_profile'))
+        self.assertEqual(res.status_code, 200)
+
+        # POST complete_profile with full_name, username, roll_no, and email
+        post_res = self.client.post(reverse('complete_profile'), {
+            'full_name': 'Final Student',
+            'username': 'final_handle',
+            'roll_no': 'ROLL999',
+            'email': 'final@example.com'
+        })
+        self.assertRedirects(post_res, reverse('dashboard'))
+
+        user.refresh_from_db()
+        self.assertEqual(user.username, 'final_handle')
+        self.assertEqual(user.email, 'final@example.com')
+        self.assertEqual(user.first_name, 'Final')
+        self.assertEqual(user.last_name, 'Student')
+        self.assertTrue(user.profile.is_profile_complete)
+        self.assertEqual(user.profile.full_name, 'Final Student')
+        self.assertEqual(user.profile.roll_number, 'ROLL999')
+        self.assertEqual(user.profile.roll_no, 'ROLL999')
+
+        # Subsequent check_profile_status redirects to dashboard
+        status_res = self.client.get(reverse('check_profile_status'))
+        self.assertRedirects(status_res, reverse('dashboard'))
+
+
+from home.models import EmailOTP
+
+class EmailOTPAndPasswordResetTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_signup_creates_inactive_user_and_otp(self):
+        res = self.client.post(reverse('auth'), {
+            'register': '1',
+            'username': 'otpstudent',
+            'email': 'otpstudent@obsidians.codes',
+            'password': 'Password123!',
+            'full_name': 'OTP Student',
+            'roll_no': 'OTP_ROLL_1'
+        })
+        self.assertRedirects(res, reverse('verify_otp'))
+        user = User.objects.get(username='otpstudent')
+        self.assertFalse(user.is_active)
+        self.assertTrue(EmailOTP.objects.filter(user=user).exists())
+        self.assertEqual(self.client.session.get('pending_user_id'), user.id)
+
+    def test_verify_otp_success(self):
+        user = User.objects.create_user(username='otpuser2', email='otp2@obsidians.codes', password='password123', is_active=False)
+        otp = EmailOTP.objects.create(user=user, otp_code='123456')
+        
+        session = self.client.session
+        session['pending_user_id'] = user.id
+        session.save()
+
+        res = self.client.post(reverse('verify_otp'), {'otp_code': '123456'})
+        self.assertRedirects(res, reverse('check_profile_status'), fetch_redirect_response=False)
+
+        user.refresh_from_db()
+        self.assertTrue(user.is_active)
+        self.assertFalse(EmailOTP.objects.filter(user=user).exists())
+
+    def test_verify_otp_invalid_code(self):
+        user = User.objects.create_user(username='otpuser3', email='otp3@obsidians.codes', password='password123', is_active=False)
+        EmailOTP.objects.create(user=user, otp_code='123456')
+        
+        session = self.client.session
+        session['pending_user_id'] = user.id
+        session.save()
+
+        res = self.client.post(reverse('verify_otp'), {'otp_code': '999999'})
+        self.assertEqual(res.status_code, 200)
+        user.refresh_from_db()
+        self.assertFalse(user.is_active)
+
+    def test_social_user_password_reset_blocked(self):
+        user = User.objects.create_user(username='socialuser', email='social@obsidians.codes')
+        user.set_unusable_password()
+        user.save()
+
+        res = self.client.post(reverse('password_reset'), {'email': 'social@obsidians.codes'})
+        self.assertEqual(res.status_code, 200)
+        self.assertContains(res, "created using Google or GitHub")
+
+    def test_password_reset_dynamic_domain_and_html_email(self):
+        from django.core import mail
+        user = User.objects.create_user(username='localuser', email='local@obsidians.codes', password='password123')
+        
+        res = self.client.post(reverse('password_reset'), {'email': 'local@obsidians.codes'}, HTTP_HOST='127.0.0.1:8000')
+        self.assertRedirects(res, reverse('password_reset_done'))
+        self.assertEqual(len(mail.outbox), 1)
+
+        sent_email = mail.outbox[0]
+        self.assertIn("127.0.0.1:8000", sent_email.body)
+
+        # Check HTML alternative
+        self.assertEqual(len(sent_email.alternatives), 1)
+        html_content, mimetype = sent_email.alternatives[0]
+        self.assertEqual(mimetype, 'text/html')
+        self.assertIn("127.0.0.1:8000", html_content)
+        self.assertIn("RESET PASSWORD", html_content)
+
+    def test_password_reset_confirm_updates_password_and_redirects_to_login(self):
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+
+        user = User.objects.create_user(username='resetuser', email='reset@obsidians.codes', password='OldPassword123!')
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        token = default_token_generator.make_token(user)
+        confirm_url = reverse('password_reset_confirm', kwargs={'uidb64': uid, 'token': token})
+
+        # 1. GET request establishes valid link session
+        get_res = self.client.get(confirm_url, follow=True)
+        self.assertEqual(get_res.status_code, 200)
+        self.assertTrue(get_res.context['validlink'])
+
+        # 2. Mismatched passwords render form validation errors
+        bad_post = self.client.post(confirm_url, {
+            'new_password1': 'NewPass12345!',
+            'new_password2': 'MismatchPass999!'
+        }, follow=True)
+        self.assertEqual(bad_post.status_code, 200)
+        self.assertTrue(bad_post.context['validlink'])
+        self.assertTrue(bad_post.context['form'].errors)
+
+        # 3. Valid password updates auth_user password and redirects to login (/auth/)
+        valid_post = self.client.post(confirm_url, {
+            'new_password1': 'NewValidPassword123!',
+            'new_password2': 'NewValidPassword123!'
+        }, follow=False)
+        self.assertRedirects(valid_post, reverse('auth'), fetch_redirect_response=False)
+
+        user.refresh_from_db()
+        self.assertTrue(user.check_password('NewValidPassword123!'))
 

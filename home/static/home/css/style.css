@@ -24,22 +24,43 @@ body {
    color: var(--white);
    font-family: 'JetBrains Mono', monospace;
    overflow-x: hidden;
-   cursor: none;
+   cursor: none !important;
  }
 
-/* CUSTOM CURSOR */
- .cursor {
-   width: 16px; height: 16px;
-   background: var(--cyan);
-   position: fixed;
-   top: 0; left: 0;
-   pointer-events: none;
-   z-index: 9999;
-   image-rendering: pixelated;
-   clip-path: polygon(0 0, 60% 0, 100% 40%, 100% 100%, 40% 100%, 0 60%);
-   transition: transform 0.1s;
-   mix-blend-mode: difference;
- }
+/* FORCE HIDE NATIVE BROWSER CURSOR EVERYWHERE */
+body,
+body *,
+body.proctored-active,
+body.proctored-active *,
+.proctored-active,
+.proctored-active * {
+  cursor: none !important;
+}
+
+/* CUSTOM CURSOR HIERARCHY */
+.cursor, #cursor, .custom-cursor, #custom-cursor {
+  width: 16px; height: 16px;
+  background: #00e5cc !important;
+  position: fixed;
+  top: 0; left: 0;
+  pointer-events: none !important; /* CRITICAL: Never block underlying clicks */
+  z-index: 2147483647 !important;   /* Maximum 32-bit integer z-index in CSS */
+  image-rendering: pixelated;
+  clip-path: polygon(0 0, 60% 0, 100% 40%, 100% 100%, 40% 100%, 0 60%);
+  transition: transform 0.08s ease-out;
+  will-change: transform, left, top;
+  mix-blend-mode: normal !important;
+  box-shadow: 0 0 10px #00e5cc, 0 0 20px #00e5cc, 0 0 30px rgba(0, 229, 204, 0.8) !important;
+  filter: drop-shadow(0 0 8px #00e5cc) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* WARNING MODAL BACKDROP & OVERLAYS */
+.warning-overlay, .modal-backdrop, #proctor-warning-modal, #proctor-fullscreen-modal {
+  z-index: 99990 !important; /* Lower than custom cursor (999999) */
+  cursor: none !important;
+}
 
 /* PIXEL GRID BACKGROUND */
 .pixel-grid {

@@ -390,3 +390,62 @@ exit $RET
         shutil.rmtree(temp_dir, ignore_errors=True)
         
     return results
+
+
+import secrets
+from django.core.mail import EmailMultiAlternatives
+from django.conf import settings
+from django.utils import timezone
+
+def send_otp_email(user):
+    from .models import EmailOTP
+    otp = f"{secrets.randbelow(1000000):06d}"
+    email_otp, created = EmailOTP.objects.get_or_create(user=user)
+    email_otp.otp_code = otp
+    email_otp.created_at = timezone.now()
+    email_otp.save()
+
+    subject = "🔑 Your Obsidian Arena Verification Code"
+    from_email = getattr(settings, 'DEFAULT_FROM_EMAIL', 'Obsidian Arena <noreply@obsidians.codes>')
+
+    plain_message = (
+        f"Hello {user.username},\n\n"
+        f"Your 6-digit email verification code for Obsidian Arena is:\n\n"
+        f"  {otp}\n\n"
+        f"This code is valid for 10 minutes.\n\n"
+        f"If you did not request this verification code, please ignore this email.\n\n"
+        f"- The Obsidian Arena Security Team"
+    )
+
+    html_message = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <style>
+        body {{ background-color: #09090f; color: #e2e8f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }}
+        .card {{ max-width: 500px; margin: 20px auto; background: #0d0d1c; border: 1px solid #2d1b69; border-radius: 8px; padding: 32px; box-shadow: 0 8px 32px rgba(124, 58, 237, 0.2); }}
+        .header {{ text-align: center; font-size: 20px; font-weight: bold; color: #00e5cc; margin-bottom: 20px; letter-spacing: 2px; }}
+        .otp-box {{ background: rgba(0, 229, 204, 0.08); border: 1px dashed #00e5cc; border-radius: 6px; text-align: center; padding: 20px; font-size: 32px; font-family: monospace; font-weight: bold; color: #ffffff; letter-spacing: 12px; margin: 24px 0; }}
+        .footer {{ text-align: center; font-size: 11px; color: #64748b; margin-top: 24px; border-top: 1px solid #1e1e38; padding-top: 16px; }}
+      </style>
+    </head>
+    <body>
+      <div class="card">
+        <div class="header">▸ OBSIDIAN ARENA ◂</div>
+        <p>Hello <strong>{user.username}</strong>,</p>
+        <p>Thank you for registering. Please use the following 6-digit verification code to activate your account:</p>
+        <div class="otp-box">{otp}</div>
+        <p style="font-size: 12px; color: #94a3b8;">This code will expire in <strong>10 minutes</strong>. Do not share this code with anyone.</p>
+        <div class="footer">
+          Obsidian Arena Competitive Programming Platform &bull; <a href="https://obsidians.codes" style="color: #00e5cc; text-decoration: none;">obsidians.codes</a>
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+
+    email = EmailMultiAlternatives(subject, plain_message, from_email, [user.email])
+    email.attach_alternative(html_message, "text/html")
+    email.send(fail_silently=False)
+    return otp

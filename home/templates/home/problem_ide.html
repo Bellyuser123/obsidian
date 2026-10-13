@@ -2893,6 +2893,6 @@
        data-strikes="{{ CURRENT_STRIKES|default:0 }}"
        data-is-admin="{% if request.user.is_staff or request.user.is_superuser %}true{% else %}false{% endif %}">
   </div>
-  <script src="{% static 'home/js/anti_cheat.js' %}"></script>
+  <script src="{% static 'home/js/anti_cheat.js' %}?v=20260814_2"></script>
 {% endif %}
 {% endblock %}

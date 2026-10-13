@@ -33,14 +33,19 @@ body {
 }
 
 /* ── CUSTOM CURSOR ── */
-.cursor {
+.cursor, #cursor, .custom-cursor, #custom-cursor {
   width: 16px; height: 16px;
-  background: var(--cyan);
+  background: #00e5cc !important;
   position: fixed; top: 0; left: 0;
-  pointer-events: none; z-index: 9999;
+  pointer-events: none !important; z-index: 2147483647 !important;
   clip-path: polygon(0 0, 60% 0, 100% 40%, 100% 100%, 40% 100%, 0 60%);
-  mix-blend-mode: difference;
-  transition: transform 0.1s;
+  mix-blend-mode: normal !important;
+  box-shadow: 0 0 10px #00e5cc, 0 0 20px #00e5cc, 0 0 30px rgba(0, 229, 204, 0.8) !important;
+  filter: drop-shadow(0 0 8px #00e5cc) !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  transition: transform 0.08s ease-out;
+  will-change: transform, left, top;
 }
 
 /* ── SCANLINE ── */
@@ -346,6 +351,19 @@ nav {
 }
 .forgot-link:hover { color: var(--purple2); }
 
+/* ── SOCIAL AUTH BUTTONS ── */
+.social-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 11px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11px;
+  letter-spacing: 1px; text-decoration: none; border-radius: 4px;
+  border: 1px solid var(--border); transition: all 0.25s ease;
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+}
+.google-btn { background: rgba(234,67,53,0.08); color: #ff6b5e; border-color: rgba(234,67,53,0.3); }
+.google-btn:hover { background: rgba(234,67,53,0.22); border-color: #ff6b5e; color: #fff; box-shadow: 0 0 15px rgba(234,67,53,0.35); }
+.github-btn { background: rgba(255,255,255,0.06); color: var(--white); border-color: rgba(255,255,255,0.2); }
+.github-btn:hover { background: rgba(255,255,255,0.18); border-color: var(--white); color: #fff; box-shadow: 0 0 15px rgba(255,255,255,0.25); }
+
 /* ── FOOTER ── */
 .page-footer {
   position: relative; z-index: 10;
@@ -368,6 +386,7 @@ nav {
 }
 </style>
 {% extends "home/base.html" %}
+{% load socialaccount %}
 {% block content %}
 
 <!-- AUTH PAGE -->
@@ -398,8 +417,27 @@ nav {
       <button class="auth-tab" id="tab-login" onclick="switchTab('login')">▶ Login</button>
     </div>
 
+    <!-- Social Authentication -->
+    <div class="social-auth-container" style="padding: 24px 40px 0;">
+      <div class="social-auth-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+        <a href="{% provider_login_url 'google' %}" class="social-btn google-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 15.973 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>
+          </svg>
+          Google
+        </a>
+        <a href="{% provider_login_url 'github' %}" class="social-btn github-btn">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+      </div>
+      <div class="form-divider" style="margin-top: 18px; margin-bottom: 0;">OR USE DIRECT LOGIN</div>
+    </div>
+
     {% if messages %}
-  <div class="form-hint" style="color: var(--lava); margin-bottom: 20px;">
+  <div class="form-hint" style="color: var(--lava); margin-bottom: 20px; padding: 12px 40px 0;">
     {% for message in messages %}
       ▸ {{ message }}
     {% endfor %}
@@ -482,7 +520,7 @@ nav {
           <div class="input-glow"></div>
           <span class="input-suffix" onclick="togglePwd('login-pwd',this)">SHOW</span>
         </div>
-        <a href="#" class="forgot-link">Forgot password? →</a>
+        <a href="{% url 'password_reset' %}" class="forgot-link">Forgot password? →</a>
       </div>
 
       <button class="form-submit" type="submit" name="login">

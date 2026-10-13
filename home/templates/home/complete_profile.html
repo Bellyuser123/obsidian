@@ -1,0 +1,199 @@
+{% extends "home/base.html" %}
+
+{% block extra_css %}
+<style>
+.complete-profile-page {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 100px 24px 60px;
+  position: relative;
+  z-index: 10;
+}
+
+.cp-card {
+  width: 100%;
+  max-width: 480px;
+  background: rgba(13,13,28,0.85);
+  border: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  position: relative;
+  overflow: hidden;
+  animation: card-in 0.7s ease both;
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(32px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cp-card::before {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--purple), var(--cyan), var(--purple));
+  background-size: 200% 100%;
+  animation: shimmer-bar 4s linear infinite;
+}
+@keyframes shimmer-bar { 0%{background-position:0%} 100%{background-position:200%} }
+
+.card-head {
+  padding: 40px 40px 24px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.card-gem {
+  width: 48px; height: 48px;
+  margin: 0 auto 16px;
+  filter: drop-shadow(0 0 16px rgba(124,58,237,.8));
+  animation: gem-bob 5s ease-in-out infinite;
+}
+@keyframes gem-bob { 0%,100%{transform:translateY(0) rotate(-3deg);} 50%{transform:translateY(-6px) rotate(3deg);} }
+
+.card-mode-label {
+  font-size: 8px; letter-spacing: 4px; color: var(--cyan);
+  border: 1px solid rgba(0,229,204,.25); background: rgba(0,229,204,.07);
+  padding: 5px 16px; display: inline-block; margin-bottom: 18px;
+}
+
+.card-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: clamp(14px, 2.5vw, 18px);
+  color: var(--white); line-height: 1.6; margin-bottom: 8px;
+}
+.card-title span { color: var(--cyan); text-shadow: 0 0 20px rgba(0,229,204,.5); }
+
+.card-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; }
+
+.cp-form { padding: 32px 40px 40px; }
+
+.form-row { margin-bottom: 22px; }
+
+.form-label {
+  display: block; font-size: 9px; letter-spacing: 3px;
+  color: var(--muted2); text-transform: uppercase; margin-bottom: 8px;
+}
+
+.form-label span { color: var(--cyan); margin-right: 6px; }
+
+.form-input {
+  width: 100%; padding: 13px 16px;
+  background: rgba(9,9,15,.7);
+  border: 1px solid var(--border);
+  color: var(--white); font-family: 'JetBrains Mono', monospace;
+  font-size: 13px; letter-spacing: 1px;
+  outline: none; transition: all .25s;
+  appearance: none; -webkit-appearance: none;
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+}
+
+.form-input::placeholder { color: var(--muted); font-size: 12px; }
+
+.form-input:focus {
+  border-color: var(--cyan);
+  background: rgba(0,229,204,.04);
+  box-shadow: 0 0 0 1px rgba(0,229,204,.15), 0 0 20px rgba(0,229,204,.06);
+}
+
+.form-hint {
+  font-size: 9px; color: var(--muted); letter-spacing: 1px; margin-top: 6px;
+  padding-left: 2px;
+}
+
+.form-submit {
+  width: 100%; padding: 16px;
+  font-family: 'Press Start 2P', monospace; font-size: 10px;
+  letter-spacing: 2px; text-transform: uppercase;
+  background: linear-gradient(135deg, var(--purple), var(--purple2));
+  color: white; border: none; cursor: pointer;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  transition: all .25s; margin-top: 12px;
+  box-shadow: 0 0 0 1px rgba(124,58,237,.4), 0 8px 30px rgba(124,58,237,.25);
+  position: relative; overflow: hidden;
+}
+.form-submit:hover {
+  background: linear-gradient(135deg, var(--cyan), #00c4ad);
+  color: var(--obsidian);
+  box-shadow: 0 0 0 1px rgba(0,229,204,.5), 0 8px 30px rgba(0,229,204,.25);
+  transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="complete-profile-page">
+  <div class="cp-card">
+
+    <div class="card-head">
+      <svg class="card-gem" viewBox="0 0 60 60" fill="none">
+        <polygon points="30,3 57,17 57,43 30,57 3,43 3,17" fill="#1a0d42" stroke="rgba(124,58,237,.5)" stroke-width="1.2"/>
+        <polygon points="30,3 57,17 30,31 3,17" fill="#2d1b69"/>
+        <polygon points="3,17 30,31 30,57 3,43" fill="#150a35"/>
+        <polygon points="57,17 30,31 30,57 57,43" fill="#1f1054"/>
+        <polygon points="30,8 38,13 30,19 22,13" fill="rgba(192,132,252,.55)"/>
+        <line x1="10" y1="24" x2="25" y2="32" stroke="rgba(124,58,237,.7)" stroke-width="1.5"/>
+        <line x1="35" y1="32" x2="50" y2="24" stroke="rgba(0,229,204,.5)" stroke-width="1.5"/>
+      </svg>
+
+      <div class="card-mode-label">▸ REQUIRED STEP ◂</div>
+      <h1 class="card-title">Complete Your <span>Profile</span></h1>
+      <p class="card-sub">Set your contest credentials to proceed</p>
+    </div>
+
+    {% if messages %}
+      <div style="padding: 16px 40px 0;">
+        {% for message in messages %}
+          <div class="form-hint" style="color: var(--lava); margin-bottom: 8px;">
+            ▸ {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    <form class="cp-form" method="POST" action="{% url 'complete_profile' %}">
+      {% csrf_token %}
+
+      <div class="form-row">
+        <label class="form-label"><span>//</span> Full Name</label>
+        <div class="input-wrap">
+          <input class="form-input" type="text" name="full_name" value="{{ profile.full_name|default:request.user.get_full_name|default:request.user.username }}" placeholder="e.g. Boudhik Chawda" required />
+        </div>
+        <span class="form-hint">▸ Verify your real full name for certificate &amp; leaderboard</span>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label"><span>//</span> Contest Username</label>
+        <div class="input-wrap">
+          <input class="form-input" type="text" name="username" value="{{ request.user.username }}" placeholder="Enter username" required />
+        </div>
+        <span class="form-hint">▸ Your public handle on Obsidian platform</span>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label"><span>//</span> College Roll Number</label>
+        <div class="input-wrap">
+          <input class="form-input" type="text" name="roll_no" value="{{ profile.roll_no|default:'' }}" placeholder="e.g. 67FC666" required />
+        </div>
+        <span class="form-hint">▸ Required for contest leaderboard verification</span>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label"><span>//</span> Email Address</label>
+        <div class="input-wrap">
+          <input class="form-input" type="email" name="email" value="{{ request.user.email|default:'' }}" placeholder="you@dpgu.edu.in" required />
+        </div>
+        <span class="form-hint">▸ Primary email address for contest notifications</span>
+      </div>
+
+      <button class="form-submit" type="submit">
+        <span>▶ &nbsp;FINALIZE &amp; ENTER ARENA</span>
+      </button>
+    </form>
+
+  </div>
+</main>
+{% endblock %}
