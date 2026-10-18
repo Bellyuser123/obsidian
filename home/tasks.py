@@ -3,7 +3,8 @@ import time
 from celery import shared_task
 from django.utils import timezone
 from django.core.cache import cache
-from django.db.models import Max
+from django.db import transaction
+from django.db.models import Max, F
 from .models import Submission, ContestProblem, Profile, UserProblemSession
 from .utils import judge_problem
 from .rule_checker import check_rules
@@ -15,9 +16,11 @@ def judge_submission(submission_id):
     except Submission.DoesNotExist:
         return
 
+    old_submission_score = float(submission.score_awarded or 0.0)
+
     # Update state to RUNNING
     submission.status = 'RUNNING'
-    submission.save()
+    submission.save(update_fields=['status'])
     cache.set(f"sub_status_{submission_id}", {
         "status": "RUNNING",
         "user_id": submission.user_id,
@@ -151,39 +154,50 @@ def judge_submission(submission_id):
 
     base_score = math.floor(base_score * 100) / 100
 
-    # 6. Calculate Time & Penalties
-    session = UserProblemSession.objects.filter(user=submission.user, contest=submission.contest, problem=problem).first()
-    time_diff_minutes = (timezone.now() - session.first_opened_at).total_seconds() / 60.0 if session else 0.0
+    # 6. Calculate Time, Penalties, and Update Profile Score atomically
+    # Wrap in transaction.atomic() with select_for_update() on Profile to serialize
+    # concurrent score updates for the same user across worker processes and threads.
+    with transaction.atomic():
+        profile = Profile.objects.select_for_update().filter(user_id=submission.user_id).first()
+        if not profile:
+            profile, _ = Profile.objects.get_or_create(user_id=submission.user_id)
+            profile = Profile.objects.select_for_update().get(id=profile.id)
 
-    # Count previous non-AC / non-PARTIAL submissions to apply penalty time
-    failed_count = Submission.objects.filter(
-        user=submission.user, contest=submission.contest, problem=problem
-    ).exclude(id=submission.id).exclude(status__in=['AC', 'PARTIAL']).count()
+        session = UserProblemSession.objects.filter(
+            user=submission.user, contest=submission.contest, problem=problem
+        ).first()
+        time_diff_minutes = (timezone.now() - session.first_opened_at).total_seconds() / 60.0 if session else 0.0
 
-    penalty_time = failed_count * submission.contest.penalty_minutes
+        # Count previous non-AC / non-PARTIAL submissions to apply penalty time
+        failed_count = Submission.objects.filter(
+            user=submission.user, contest=submission.contest, problem=problem
+        ).exclude(id=submission.id).exclude(status__in=['AC', 'PARTIAL']).count()
 
-    submission.status = final_status
-    submission.is_accepted = is_accepted
-    submission.score_awarded = base_score
-    submission.total_time_taken = time_diff_minutes + penalty_time
-    submission.execution_time = max_time
-    submission.memory_used = max_mem
-    if error_msg:
-        submission.error_message = error_msg
-    submission.save()
+        penalty_minutes = getattr(submission.contest, 'penalty_minutes', 10) if submission.contest else 0
+        penalty_time = failed_count * penalty_minutes
 
-    # 7. Update Profile Score (only add the difference if they improved)
-    best_previous = Submission.objects.filter(
-        user=submission.user, contest=submission.contest, problem=problem
-    ).exclude(id=submission.id).aggregate(Max('score_awarded'))['score_awarded__max']
+        submission.status = final_status
+        submission.is_accepted = is_accepted
+        submission.score_awarded = base_score
+        submission.total_time_taken = time_diff_minutes + penalty_time
+        submission.execution_time = max_time
+        submission.memory_used = max_mem
+        if error_msg:
+            submission.error_message = error_msg
+        submission.save()
 
-    best_previous = best_previous or 0.0
+        # 7. Update Profile Score (only add the difference if they improved over best previous)
+        best_previous = Submission.objects.filter(
+            user=submission.user, contest=submission.contest, problem=problem
+        ).exclude(id=submission.id).aggregate(Max('score_awarded'))['score_awarded__max'] or 0.0
 
-    if base_score > best_previous:
-        diff = base_score - best_previous
-        profile = submission.user.profile
-        profile.total_score += int(diff)
-        profile.save()
+        # Account for previous score on this exact submission in case of re-judging
+        effective_previous = max(best_previous, old_submission_score)
+
+        if base_score > effective_previous:
+            diff = int(round(base_score)) - int(round(effective_previous))
+            if diff > 0:
+                Profile.objects.filter(id=profile.id).update(total_score=F('total_score') + diff)
 
     # Scrub hidden test case actual outputs before caching for client-side display
     for idx, tc in enumerate(all_cases):
@@ -205,6 +219,10 @@ def judge_submission(submission_id):
         "created_at": submission.time_submitted.timestamp(),
         "ok": True
     }, timeout=300)
+
+    # 9. Invalidate cached contest leaderboard so fresh scores appear immediately on next lobby load
+    if submission.contest_id:
+        cache.delete(f"contest_leaderboard_{submission.contest_id}")
 
 
 @shared_task
@@ -257,7 +275,7 @@ def run_code_task(user_id, problem_id, code, language_slug, is_custom=False, cus
 
 
 from celery.signals import task_prerun, task_postrun
-from django.db import close_old_connections
+from django.db import close_old_connections, connections
 
 @task_prerun.connect
 def close_db_connections_before_task(*args, **kwargs):
@@ -265,5 +283,10 @@ def close_db_connections_before_task(*args, **kwargs):
 
 @task_postrun.connect
 def close_db_connections_after_task(*args, **kwargs):
+    for conn in connections.all(initialized_only=True):
+        try:
+            conn.close()
+        except Exception:
+            pass
     close_old_connections()
 

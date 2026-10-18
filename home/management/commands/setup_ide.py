@@ -1,4 +1,6 @@
+import shutil
 import subprocess
+from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from home.models import Language
@@ -87,18 +89,20 @@ LANGUAGE_SEED = [
 class Command(BaseCommand):
     help = (
         "Seeds all supported IDE languages into the database and pre-pulls "
-        "their Docker images so the first student submission is instant."
+        "their container images (via settings.CONTAINER_RUNNER: podman/docker) "
+        "so the first student submission is instant."
     )
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--skip-pull",
             action="store_true",
-            help="Seed the database only; skip the Docker image pull step.",
+            help="Seed the database only; skip the container image pull step.",
         )
 
     def handle(self, *args, **options):
-        self.stdout.write(self.style.MIGRATE_HEADING("\n=== Obsidian IDE Setup ===\n"))
+        runner = getattr(settings, 'CONTAINER_RUNNER', 'podman').strip().lower()
+        self.stdout.write(self.style.MIGRATE_HEADING(f"\n=== Obsidian IDE Setup (Container Engine: {runner}) ===\n"))
 
         # ------------------------------------------------------------------
         # Step 1: Seed the Language table
@@ -134,14 +138,26 @@ class Command(BaseCommand):
         )
 
         # ------------------------------------------------------------------
-        # Step 2: Pre-pull Docker images
+        # Step 2: Pre-pull container images
         # ------------------------------------------------------------------
         if options["skip_pull"]:
-            self.stdout.write(self.style.WARNING("[ 2/2 ] Skipping Docker image pull (--skip-pull flag set)."))
+            self.stdout.write(self.style.WARNING(f"[ 2/2 ] Skipping container image pull (--skip-pull flag set)."))
             self.stdout.write(self.style.SUCCESS("\n=== Setup complete! ===\n"))
             return
 
-        self.stdout.write(self.style.MIGRATE_HEADING("[ 2/2 ] Pre-pulling Docker images..."))
+        # Check if runner CLI is available on host PATH
+        if not shutil.which(runner):
+            self.stdout.write(
+                self.style.WARNING(
+                    f"[ 2/2 ] Container runner '{runner}' not found on system PATH.\n"
+                    f"        Skipping image pull. Ensure {runner} is installed and running,\n"
+                    f"        or set CONTAINER_RUNNER in .env to an available engine ('podman' or 'docker')."
+                )
+            )
+            self.stdout.write(self.style.SUCCESS("\n=== Database seeded! ===\n"))
+            return
+
+        self.stdout.write(self.style.MIGRATE_HEADING(f"[ 2/2 ] Pre-pulling container images via {runner}..."))
         self.stdout.write("        (This only downloads images not already cached. May take a few minutes on first run.)\n")
 
         # Collect unique images from seed data
@@ -149,39 +165,48 @@ class Command(BaseCommand):
         pull_errors = []
 
         for image in images:
+            # Normalize image name for podman / docker registry resolution
+            target_image = image
+            if runner == 'podman':
+                parts = image.split('/')
+                if len(parts) == 1:
+                    target_image = f"docker.io/library/{image}"
+                elif '.' not in parts[0] and ':' not in parts[0] and parts[0] != 'localhost':
+                    target_image = f"docker.io/{image}"
+
             # Check if image is already cached
             inspect = subprocess.run(
-                ["docker", "image", "inspect", image],
+                [runner, "image", "inspect", target_image],
                 capture_output=True,
             )
             if inspect.returncode == 0:
-                self.stdout.write(f"  {self.style.SUCCESS('CACHED')}  {image}")
+                self.stdout.write(f"  {self.style.SUCCESS('CACHED')}  {target_image}")
                 continue
 
-            self.stdout.write(f"  {self.style.MIGRATE_LABEL('PULLING')} {image} ...", ending="")
+            self.stdout.write(f"  {self.style.MIGRATE_LABEL('PULLING')} {target_image} ...", ending="")
             self.stdout.flush()
 
             pulled = False
             for attempt in range(1, 4):
                 result = subprocess.run(
-                    ["docker", "pull", image],
+                    [runner, "pull", target_image],
                     capture_output=True,
                     timeout=300,
                 )
                 if result.returncode == 0:
-                    self.stdout.write(f"\r  {self.style.SUCCESS('PULLED')}  {image}                  ")
+                    self.stdout.write(f"\r  {self.style.SUCCESS('PULLED')}  {target_image}                  ")
                     pulled = True
                     break
                 else:
-                    error_msg = result.stderr.decode().strip().splitlines()[-1]
+                    error_msg = result.stderr.decode().strip().splitlines()[-1] if result.stderr else "Unknown pull error"
                     if attempt < 3:
-                        self.stdout.write(f"\r  {self.style.WARNING('RETRY')}   {image} (attempt {attempt}/3)...", ending="")
+                        self.stdout.write(f"\r  {self.style.WARNING('RETRY')}   {target_image} (attempt {attempt}/3)...", ending="")
                         self.stdout.flush()
                     else:
-                        self.stdout.write(f"\r  {self.style.ERROR('FAILED')}  {image}: {error_msg}")
+                        self.stdout.write(f"\r  {self.style.ERROR('FAILED')}  {target_image}: {error_msg}")
 
             if not pulled:
-                pull_errors.append(image)
+                pull_errors.append(target_image)
 
         if pull_errors:
             self.stdout.write(
@@ -191,6 +216,6 @@ class Command(BaseCommand):
                 )
             )
         else:
-            self.stdout.write(self.style.SUCCESS("\n  All images ready!"))
+            self.stdout.write(self.style.SUCCESS(f"\n  All images ready via {runner}!"))
 
-        self.stdout.write(self.style.SUCCESS("\n=== Setup complete! Run `python manage.py runserver` to start. ===\n"))
+        self.stdout.write(self.style.SUCCESS(f"\n=== Setup complete! Container runner: {runner}. ===\n"))

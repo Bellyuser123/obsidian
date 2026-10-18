@@ -79,11 +79,25 @@ class ContestProblemInline(admin.TabularInline):
 
 
 class ContestAdmin(admin.ModelAdmin):
-    list_display = ('name', 'start_time', 'end_time', 'passkey', 'is_team_contest', 'enable_anti_cheat', 'prize')
+    list_display = ('name', 'host', 'start_time', 'end_time', 'passkey', 'is_team_contest', 'enable_anti_cheat', 'prize')
     list_editable = ('enable_anti_cheat',)
-    search_fields = ('name', 'description', 'tags')
-    list_filter = ('start_time', 'end_time', 'is_team_contest')
+    search_fields = ('name', 'description', 'tags', 'host__username')
+    list_filter = ('start_time', 'end_time', 'is_team_contest', 'enable_anti_cheat')
+    raw_id_fields = ('host',)
     inlines = [ContestProblemInline]
+    actions = ['reset_banned_contestants_action', 'restart_contest_action']
+
+    @admin.action(description="Reset banned contestants and violation logs for selected contests")
+    def reset_banned_contestants_action(self, request, queryset):
+        for contest in queryset:
+            contest.reset_banned_list()
+        self.message_user(request, "Selected contest banned lists have been reset successfully.")
+
+    @admin.action(description="Restart contest (reset bans and strikes)")
+    def restart_contest_action(self, request, queryset):
+        for contest in queryset:
+            contest.restart_contest()
+        self.message_user(request, "Selected contests restarted and banned lists reset.")
 
 
 class SubmissionAdmin(admin.ModelAdmin):

@@ -25,9 +25,23 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't', 'yes')
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = 'django-insecure-dev-local-fallback-key-do-not-use-in-production'
+    else:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured("SECRET_KEY environment variable is missing! It is required in production.")
+elif not DEBUG and SECRET_KEY.startswith('django-insecure-'):
+    import warnings
+    warnings.warn("Insecure default SECRET_KEY detected in production! Please generate a strong key.")
+
+_allowed_hosts = os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost')
+ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts.split(',') if h.strip()]
+if not DEBUG and '*' in ALLOWED_HOSTS:
+    import warnings
+    warnings.warn("Wildcard '*' in ALLOWED_HOSTS is dangerous in production! Restrict to specific domains.")
 
 
 # Application definition
@@ -92,21 +106,29 @@ WSGI_APPLICATION = 'obsidian_proj.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'dj_db_conn_pool.backends.postgresql',
+        'ENGINE': os.getenv('DB_ENGINE', 'dj_db_conn_pool.backends.postgresql'),
         'NAME': os.getenv('DB_NAME', 'defaultdb'),
         'USER': os.getenv('DB_USER', 'avnadmin'),
         'PASSWORD': os.getenv('DB_PASSWORD'),
         'HOST': os.getenv('DB_HOST'),
         'PORT': os.getenv('DB_PORT', '23954'),
+        # Total DB connection ceiling is 20 (Aiven Cloud PostgreSQL tier).
+        # dj_db_conn_pool manages an independent SQLAlchemy QueuePool per process.
+        # Across 2 Gunicorn web processes + 1 Celery worker process = 3 processes:
+        # Base: 3 * 4 = 12 conns; Peak overflow: 3 * 6 = 18 conns <= 20 connection limit.
+        # TIMEOUT ensures threads queue up during traffic bursts rather than failing with 500s.
         'POOL_OPTIONS': {
-            'POOL_SIZE': 6,
-            'MAX_OVERFLOW': 2,
-            'RECYCLE': 300,
+            'POOL_SIZE': int(os.getenv('DB_POOL_SIZE', '4')),
+            'MAX_OVERFLOW': int(os.getenv('DB_MAX_OVERFLOW', '2')),
+            'TIMEOUT': int(os.getenv('DB_POOL_TIMEOUT', '30')),
+            'RECYCLE': int(os.getenv('DB_RECYCLE', '300')),
+            'PRE_PING': True,
         },
         'OPTIONS': {
-            'sslmode': 'require',
+            'sslmode': os.getenv('DB_SSLMODE', 'require'),
             'connect_timeout': 10,
         },
+        'CONN_MAX_AGE': int(os.getenv('DB_CONN_MAX_AGE', '0')),
         'DISABLE_SERVER_SIDE_CURSORS': True,
     }
 }
@@ -209,3 +231,16 @@ CACHES = {
 
 # Container runner engine (can be 'podman' or 'docker')
 CONTAINER_RUNNER = os.getenv('CONTAINER_RUNNER', 'podman')
+
+# Security Headers & SSL Hardening for Production
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+
+    SECURE_SSL_REDIRECT = os.getenv('SECURE_SSL_REDIRECT', 'False').lower() in ('true', '1')
+    SESSION_COOKIE_SECURE = os.getenv('SESSION_COOKIE_SECURE', 'False').lower() in ('true', '1')
+    CSRF_COOKIE_SECURE = os.getenv('CSRF_COOKIE_SECURE', 'False').lower() in ('true', '1')
+    SECURE_HSTS_SECONDS = int(os.getenv('SECURE_HSTS_SECONDS', '0'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv('SECURE_HSTS_INCLUDE_SUBDOMAINS', 'False').lower() in ('true', '1')
+    SECURE_HSTS_PRELOAD = os.getenv('SECURE_HSTS_PRELOAD', 'False').lower() in ('true', '1')

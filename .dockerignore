@@ -1,0 +1,28 @@
+# Virtual environments
+.venv*
+venv/
+env/
+
+# Version control & IDE configs
+.git
+.gitignore
+.idea/
+.vscode/
+
+# Environment secrets and credentials
+.env*
+!.env.example
+*.pem
+*.key
+
+# Local database & temp testcases
+scratch/
+testcase_inputs/
+testcase_outputs/
+*.sqlite3
+
+# Python cache & logs
+__pycache__/
+*.py[cod]
+*$py.class
+*.log

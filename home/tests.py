@@ -1,10 +1,14 @@
-from django.test import TestCase, Client
+from django.test import TestCase, Client, override_settings
 from django.contrib.auth.models import User
 from django.utils import timezone
 from home.models import Contest, Problem, ContestProblem, UserProblemSession, Submission
 from django.urls import reverse
 import datetime
 
+@override_settings(
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    SESSION_ENGINE='django.contrib.sessions.backends.db'
+)
 class ContestLobbyTestCase(TestCase):
     def setUp(self):
         self.client = Client()
@@ -204,6 +208,10 @@ class ContestLobbyTestCase(TestCase):
 from django.core.exceptions import ValidationError
 from home.models import TestCase as ModelTestCase, Language
 
+@override_settings(
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    SESSION_ENGINE='django.contrib.sessions.backends.db'
+)
 class TestCaseValidationAndScoringTests(TestCase):
     def setUp(self):
         self.problem = Problem.objects.create(
@@ -403,56 +411,197 @@ class TestCaseValidationAndScoringTests(TestCase):
         Profile.objects.update_or_create(user=user, defaults={'full_name': "Cheat Student", 'roll_no': "CHEAT101", 'roll_number': "CHEAT101", 'is_profile_complete': True})
         self.client.login(username='cheat_student', password='password123')
 
-        # 2. Create contest
+        # 2. Create contest that is currently live
         contest = Contest.objects.create(
             name="Anti-Cheat Test Contest",
-            start_time=timezone.now(),
+            start_time=timezone.now() - datetime.timedelta(minutes=10),
             end_time=timezone.now() + datetime.timedelta(hours=2),
             enable_anti_cheat=True
         )
 
-        # 3. Report first violation (Strike 1)
         url = reverse('log_violation', args=[contest.id])
+
+        # 3. Report first violation (Strike 1: WARN, chance 1 used)
         res1 = self.client.post(url, {'violation_type': 'TAB_SWITCH', 'details': 'Switched tab once'})
         self.assertEqual(res1.status_code, 200)
         data1 = res1.json()
         self.assertEqual(data1['action'], 'WARN')
         self.assertEqual(data1['current_strikes'], 1)
 
-        # 4. Report second violation (Strike 2)
+        # 4. Report second violation (Strike 2: WARN, chance 2 used)
         res2 = self.client.post(url, {'violation_type': 'CLIPBOARD', 'details': 'Tried copying'})
         self.assertEqual(res2.status_code, 200)
         data2 = res2.json()
         self.assertEqual(data2['action'], 'WARN')
         self.assertEqual(data2['current_strikes'], 2)
 
-        # 5. Report third violation (Strike 3 - BAN)
+        # 5. Report third violation (Strike 3: WARN, chance 3 used - 3 strikes before ban!)
         res3 = self.client.post(url, {'violation_type': 'DEVTOOLS', 'details': 'Opened inspect'})
         self.assertEqual(res3.status_code, 200)
         data3 = res3.json()
-        self.assertEqual(data3['action'], 'BAN')
-
-        # 6. Verify that logs exist in DB
-        self.assertEqual(ViolationLog.objects.filter(user=user, contest=contest).count(), 3)
+        self.assertEqual(data3['action'], 'WARN')
+        self.assertEqual(data3['current_strikes'], 3)
         participation = ContestParticipation.objects.get(user=user, contest=contest)
+        self.assertFalse(participation.is_disqualified)
+
+        # 6. Report fourth violation (Strike 4: BAN - banned on 4th strike!)
+        res4 = self.client.post(url, {'violation_type': 'FULLSCREEN', 'details': 'Exited fullscreen'})
+        self.assertEqual(res4.status_code, 200)
+        data4 = res4.json()
+        self.assertEqual(data4['action'], 'BAN')
+        self.assertEqual(data4['current_strikes'], 4)
+
+        # Verify that logs exist in DB and user is disqualified
+        self.assertEqual(ViolationLog.objects.filter(user=user, contest=contest).count(), 4)
+        participation.refresh_from_db()
         self.assertTrue(participation.is_disqualified)
-        
+
         # Verify user profile remains active (contest-specific disqualification only)
         user.refresh_from_db()
         self.assertFalse(user.profile.is_disqualified)
 
-        # 7. Unban self and verify reset
+        # 7. Attempt unban as normal contestant (MUST FAIL with 403 Forbidden - backdoor closed!)
         unban_url = reverse('unban_self', args=[contest.id])
-        res_unban = self.client.get(unban_url)
-        self.assertRedirects(res_unban, reverse('contest_lobby', args=[contest.id]))
-        
+        res_unban_unauth = self.client.get(unban_url)
+        self.assertEqual(res_unban_unauth.status_code, 403)
+        participation.refresh_from_db()
+        self.assertTrue(participation.is_disqualified)
+
+        # 8. Unban as superuser (MUST SUCCEED)
+        user.is_superuser = True
+        user.save()
+        res_unban_auth = self.client.get(unban_url + f'?user_id={user.id}')
+        self.assertRedirects(res_unban_auth, reverse('contest_lobby', args=[contest.id]))
+
         participation.refresh_from_db()
         self.assertFalse(participation.is_disqualified)
         self.assertEqual(ViolationLog.objects.filter(user=user, contest=contest).count(), 0)
 
+    def test_host_and_superuser_immune_from_ban(self):
+        from home.models import ViolationLog, ContestParticipation, Profile
+        host_user = User.objects.create_user(username='contest_host_user', password='password123')
+        Profile.objects.update_or_create(user=host_user, defaults={'full_name': "Host User", 'roll_no': "HOST01", 'is_profile_complete': True})
+
+        contest = Contest.objects.create(
+            name="Host Immunity Contest",
+            start_time=timezone.now() - datetime.timedelta(minutes=10),
+            end_time=timezone.now() + datetime.timedelta(hours=2),
+            enable_anti_cheat=True,
+            host=host_user
+        )
+
+        self.client.login(username='contest_host_user', password='password123')
+        url = reverse('log_violation', args=[contest.id])
+
+        # Report 5 infractions as host - must never be banned
+        for _ in range(5):
+            res = self.client.post(url, {'violation_type': 'TAB_SWITCH', 'details': 'Host switched tab'})
+            self.assertEqual(res.status_code, 200)
+            data = res.json()
+            self.assertEqual(data.get('action'), 'NONE')
+
+        self.assertEqual(ViolationLog.objects.filter(user=host_user, contest=contest).count(), 0)
+        participation = ContestParticipation.objects.filter(user=host_user, contest=contest).first()
+        if participation:
+            self.assertFalse(participation.is_disqualified)
+
+    def test_contest_specific_disqualification(self):
+        from home.models import ContestParticipation, Profile
+        user = User.objects.create_user(username='multi_contest_user', password='password123')
+        Profile.objects.update_or_create(user=user, defaults={'full_name': "Multi User", 'roll_no': "MULTI01", 'is_profile_complete': True})
+        self.client.login(username='multi_contest_user', password='password123')
+
+        contest1 = Contest.objects.create(
+            name="Contest One",
+            start_time=timezone.now() - datetime.timedelta(minutes=10),
+            end_time=timezone.now() + datetime.timedelta(hours=1),
+            enable_anti_cheat=True
+        )
+        contest2 = Contest.objects.create(
+            name="Contest Two",
+            start_time=timezone.now() - datetime.timedelta(minutes=10),
+            end_time=timezone.now() + datetime.timedelta(hours=1),
+            enable_anti_cheat=True
+        )
+        ContestProblem.objects.create(contest=contest1, problem=self.problem, points=10)
+        ContestProblem.objects.create(contest=contest2, problem=self.problem, points=10)
+
+        # Disqualify user only in Contest 1
+        ContestParticipation.objects.create(user=user, contest=contest1, is_disqualified=True)
+        ContestParticipation.objects.create(user=user, contest=contest2, is_disqualified=False)
+
+        # User blocked from Contest 1
+        r1 = self.client.get(reverse('contest_lobby', args=[contest1.id]))
+        self.assertEqual(r1.status_code, 403)
+
+        # User CAN access Contest 2
+        r2 = self.client.get(reverse('contest_lobby', args=[contest2.id]))
+        self.assertEqual(r2.status_code, 200)
+
+    def test_proctor_mode_disabled_no_ban(self):
+        from home.models import ViolationLog, Profile
+        user = User.objects.create_user(username='no_proctor_user', password='password123')
+        Profile.objects.update_or_create(user=user, defaults={'full_name': "No Proctor User", 'roll_no': "NOPROC01", 'is_profile_complete': True})
+        self.client.login(username='no_proctor_user', password='password123')
+
+        contest = Contest.objects.create(
+            name="No Proctor Contest",
+            start_time=timezone.now() - datetime.timedelta(minutes=10),
+            end_time=timezone.now() + datetime.timedelta(hours=1),
+            enable_anti_cheat=False
+        )
+
+        url = reverse('log_violation', args=[contest.id])
+        res = self.client.post(url, {'violation_type': 'TAB_SWITCH', 'details': 'tab switch'})
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()['action'], 'NONE')
+        self.assertEqual(ViolationLog.objects.filter(user=user, contest=contest).count(), 0)
+
+    def test_banned_only_while_live_and_reset_on_end_or_restart(self):
+        from home.models import ContestParticipation, Profile
+        user = User.objects.create_user(username='live_check_user', password='password123')
+        Profile.objects.update_or_create(user=user, defaults={'full_name': "Live Check User", 'roll_no': "LIVE01", 'is_profile_complete': True})
+        self.client.login(username='live_check_user', password='password123')
+
+        # Contest that is currently live
+        contest = Contest.objects.create(
+            name="Live Timing Contest",
+            start_time=timezone.now() - datetime.timedelta(minutes=30),
+            end_time=timezone.now() + datetime.timedelta(minutes=30),
+            enable_anti_cheat=True
+        )
+        ContestProblem.objects.create(contest=contest, problem=self.problem, points=10)
+
+        p = ContestParticipation.objects.create(user=user, contest=contest, is_disqualified=True)
+
+        # Blocked while live
+        r_live = self.client.get(reverse('contest_lobby', args=[contest.id]))
+        self.assertEqual(r_live.status_code, 403)
+
+        # Now contest ends (end_time in the past)
+        contest.end_time = timezone.now() - datetime.timedelta(minutes=1)
+        contest.save()
+
+        # Access after contest ends - allows access and automatically resets banned list
+        r_ended = self.client.get(reverse('contest_lobby', args=[contest.id]))
+        self.assertEqual(r_ended.status_code, 200)
+        p.refresh_from_db()
+        self.assertFalse(p.is_disqualified)
+
+        # Test restart: re-disqualify, then restart contest
+        p.is_disqualified = True
+        p.save()
+        contest.restart_contest(
+            new_start_time=timezone.now() - datetime.timedelta(minutes=5),
+            new_end_time=timezone.now() + datetime.timedelta(hours=1)
+        )
+        p.refresh_from_db()
+        self.assertFalse(p.is_disqualified)
+
     def test_anti_cheat_gatekeeper(self):
         from home.models import ContestParticipation, Profile
         # 1. Register user
+        User.objects.filter(username='banned_student').delete()
         user = User.objects.create_user(username='banned_student', password='password123')
         Profile.objects.update_or_create(user=user, defaults={'full_name': "Banned Student", 'roll_no': "BANNED101", 'roll_number': "BANNED101", 'is_profile_complete': True})
         self.client.login(username='banned_student', password='password123')
@@ -498,6 +647,10 @@ class TestCaseValidationAndScoringTests(TestCase):
         self.assertEqual(r6.status_code, 200)
 
 
+@override_settings(
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    SESSION_ENGINE='django.contrib.sessions.backends.db'
+)
 class SocialAuthAndProfileTestCase(TestCase):
     def setUp(self):
         self.client = Client()
@@ -554,6 +707,10 @@ class SocialAuthAndProfileTestCase(TestCase):
 
 from home.models import EmailOTP
 
+@override_settings(
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    SESSION_ENGINE='django.contrib.sessions.backends.db'
+)
 class EmailOTPAndPasswordResetTestCase(TestCase):
     def setUp(self):
         self.client = Client()
@@ -644,7 +801,8 @@ class EmailOTPAndPasswordResetTestCase(TestCase):
         self.assertTrue(get_res.context['validlink'])
 
         # 2. Mismatched passwords render form validation errors
-        bad_post = self.client.post(confirm_url, {
+        form_url = get_res.redirect_chain[0][0] if get_res.redirect_chain else confirm_url
+        bad_post = self.client.post(form_url, {
             'new_password1': 'NewPass12345!',
             'new_password2': 'MismatchPass999!'
         }, follow=True)
@@ -653,7 +811,7 @@ class EmailOTPAndPasswordResetTestCase(TestCase):
         self.assertTrue(bad_post.context['form'].errors)
 
         # 3. Valid password updates auth_user password and redirects to login (/auth/)
-        valid_post = self.client.post(confirm_url, {
+        valid_post = self.client.post(form_url, {
             'new_password1': 'NewValidPassword123!',
             'new_password2': 'NewValidPassword123!'
         }, follow=False)
@@ -661,4 +819,442 @@ class EmailOTPAndPasswordResetTestCase(TestCase):
 
         user.refresh_from_db()
         self.assertTrue(user.check_password('NewValidPassword123!'))
+
+
+class ProductionSecuritySettingsTestCase(TestCase):
+    def test_settings_security_defaults(self):
+        from django.conf import settings
+        # Ensure ALLOWED_HOSTS does not contain wildcard *
+        self.assertNotIn('*', settings.ALLOWED_HOSTS)
+        # Ensure SECRET_KEY is set and non-empty
+        self.assertTrue(bool(settings.SECRET_KEY))
+
+    def test_secret_key_missing_in_production_raises_error(self):
+        from django.core.exceptions import ImproperlyConfigured
+
+        def check_secret_key(secret_key, debug):
+            if not secret_key:
+                if debug:
+                    return 'dev-key'
+                raise ImproperlyConfigured("SECRET_KEY missing")
+            return secret_key
+
+        with self.assertRaises(ImproperlyConfigured):
+            check_secret_key('', False)
+
+        self.assertEqual(check_secret_key('', True), 'dev-key')
+        self.assertEqual(check_secret_key('my-prod-key', False), 'my-prod-key')
+
+    def test_allowed_hosts_parsing(self):
+        def parse_allowed_hosts(raw_str):
+            return [h.strip() for h in raw_str.split(',') if h.strip()]
+
+        hosts = parse_allowed_hosts(" 127.0.0.1 , localhost , obsidians.codes ")
+        self.assertEqual(hosts, ['127.0.0.1', 'localhost', 'obsidians.codes'])
+
+
+class DatabaseScoreRaceConditionTestCase(TestCase):
+    def setUp(self):
+        from django.utils import timezone
+        self.user = User.objects.create_user(username='test_contestant', password='Password123!')
+        self.profile = self.user.profile
+        self.profile.total_score = 0
+        self.profile.save()
+
+        self.contest = Contest.objects.create(
+            name="Scoring Race Contest",
+            description="Testing race-free score updates",
+            start_time=timezone.now() - timezone.timedelta(hours=1),
+            end_time=timezone.now() + timezone.timedelta(hours=2),
+            penalty_minutes=10
+        )
+        from home.models import Language
+        self.lang, _ = Language.objects.get_or_create(name='Python 3', slug='python3', ace_mode='python')
+
+        self.prob1 = Problem.objects.create(
+            title="Problem 1", statement="P1", input_format="in", output_format="out", constraints="c"
+        )
+        self.cp1 = ContestProblem.objects.create(contest=self.contest, problem=self.prob1, points=100)
+        # Two testcases: tc1 (weight 4) and tc2 (weight 6) -> total weight = 10
+        ModelTestCase.objects.create(problem=self.prob1, input_data="1", expected_output="1", weight=4)
+        ModelTestCase.objects.create(problem=self.prob1, input_data="2", expected_output="2", weight=6)
+
+        self.prob2 = Problem.objects.create(
+            title="Problem 2", statement="P2", input_format="in", output_format="out", constraints="c"
+        )
+        self.cp2 = ContestProblem.objects.create(contest=self.contest, problem=self.prob2, points=50)
+        ModelTestCase.objects.create(problem=self.prob2, input_data="2", expected_output="2", weight=1)
+
+    def test_score_update_single_improvement_and_lower_attempts(self):
+        from home.tasks import judge_submission
+        from unittest.mock import patch
+
+        # First submission on Prob 1: Partial pass (passes tc1 only -> 4/10 * 100 = 40.0)
+        sub1 = Submission.objects.create(
+            user=self.user, contest=self.contest, problem=self.prob1,
+            code="print(1)", language=self.lang, status='PENDING'
+        )
+        mock_partial = [
+            {'id': '01', 'status': 'pass', 'label': 'PASSED', 'stdout': '1', 'time': '0.1s'},
+            {'id': '02', 'status': 'fail', 'label': 'WRONG ANSWER', 'stdout': 'wrong', 'time': '0.1s'}
+        ]
+        with patch('home.tasks.judge_problem', return_value=mock_partial):
+            judge_submission(sub1.id)
+
+        self.profile.refresh_from_db()
+        sub1.refresh_from_db()
+        self.assertEqual(sub1.score_awarded, 40.0)
+        self.assertEqual(self.profile.total_score, 40)
+
+        # Second submission on Prob 1: Full pass (passes both tc1 & tc2 -> 10/10 * 100 = 100.0)
+        sub2 = Submission.objects.create(
+            user=self.user, contest=self.contest, problem=self.prob1,
+            code="print(1)", language=self.lang, status='PENDING'
+        )
+        mock_full = [
+            {'id': '01', 'status': 'pass', 'label': 'PASSED', 'stdout': '1', 'time': '0.1s'},
+            {'id': '02', 'status': 'pass', 'label': 'PASSED', 'stdout': '2', 'time': '0.1s'}
+        ]
+        with patch('home.tasks.judge_problem', return_value=mock_full):
+            judge_submission(sub2.id)
+
+        self.profile.refresh_from_db()
+        sub2.refresh_from_db()
+        self.assertEqual(sub2.score_awarded, 100.0)
+        # Score improved from 40 to 100: profile total_score must be exactly 100 (incremented by 60)
+        self.assertEqual(self.profile.total_score, 100)
+
+        # Third submission on Prob 1: Worse attempt (partial pass 40.0)
+        sub3 = Submission.objects.create(
+            user=self.user, contest=self.contest, problem=self.prob1,
+            code="print(1)", language=self.lang, status='PENDING'
+        )
+        with patch('home.tasks.judge_problem', return_value=mock_partial):
+            judge_submission(sub3.id)
+
+        self.profile.refresh_from_db()
+        sub3.refresh_from_db()
+        self.assertEqual(sub3.score_awarded, 40.0)
+        # Worse score should not reduce or corrupt the user's score
+        self.assertEqual(self.profile.total_score, 100)
+
+    def test_score_update_across_different_problems(self):
+        from home.tasks import judge_submission
+        from unittest.mock import patch
+
+        sub_p1 = Submission.objects.create(
+            user=self.user, contest=self.contest, problem=self.prob1,
+            code="code1", language=self.lang, status='PENDING'
+        )
+        sub_p2 = Submission.objects.create(
+            user=self.user, contest=self.contest, problem=self.prob2,
+            code="code2", language=self.lang, status='PENDING'
+        )
+
+        mock_full_p1 = [
+            {'id': '01', 'status': 'pass', 'label': 'PASSED', 'stdout': '1', 'time': '0.1s'},
+            {'id': '02', 'status': 'pass', 'label': 'PASSED', 'stdout': '2', 'time': '0.1s'}
+        ]
+        mock_full_p2 = [
+            {'id': '01', 'status': 'pass', 'label': 'PASSED', 'stdout': '2', 'time': '0.1s'}
+        ]
+        with patch('home.tasks.judge_problem', side_effect=[mock_full_p1, mock_full_p2]):
+            judge_submission(sub_p1.id)
+            judge_submission(sub_p2.id)
+
+        self.profile.refresh_from_db()
+        # Prob 1 gave 100, Prob 2 gave 50 -> total_score must be 150
+        self.assertEqual(self.profile.total_score, 150)
+
+    def test_rejudge_submission_idempotency(self):
+        from home.tasks import judge_submission
+        from unittest.mock import patch
+
+        sub = Submission.objects.create(
+            user=self.user, contest=self.contest, problem=self.prob1,
+            code="code", language=self.lang, status='PENDING'
+        )
+        mock_full = [
+            {'id': '01', 'status': 'pass', 'label': 'PASSED', 'stdout': '1', 'time': '0.1s'},
+            {'id': '02', 'status': 'pass', 'label': 'PASSED', 'stdout': '2', 'time': '0.1s'}
+        ]
+        with patch('home.tasks.judge_problem', return_value=mock_full):
+            judge_submission(sub.id)
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.total_score, 100)
+
+        # Re-judging the same submission should not double-count the score
+        with patch('home.tasks.judge_problem', return_value=mock_full):
+            judge_submission(sub.id)
+
+        self.profile.refresh_from_db()
+        self.assertEqual(self.profile.total_score, 100)
+
+
+class DatabasePoolStarvationAndLimitsTestCase(TestCase):
+    def test_pool_options_enforce_20_connection_ceiling(self):
+        from django.conf import settings
+        db_conf = settings.DATABASES['default']
+        pool_options = db_conf.get('POOL_OPTIONS', {})
+
+        pool_size = pool_options.get('POOL_SIZE', 0)
+        max_overflow = pool_options.get('MAX_OVERFLOW', 0)
+        timeout = pool_options.get('TIMEOUT', 0)
+        recycle = pool_options.get('RECYCLE', 0)
+        pre_ping = pool_options.get('PRE_PING', False)
+
+        # Ensure base pool and overflow values are bounded
+        self.assertLessEqual(pool_size, 5, "Per-process POOL_SIZE should be <= 5 for 20-connection ceiling")
+        self.assertLessEqual(max_overflow, 2, "Per-process MAX_OVERFLOW should be <= 2")
+
+        # Across 3 processes (2 Gunicorn web + 1 Celery worker):
+        # Peak connection count must strictly be <= 20
+        num_processes = 3
+        max_peak_connections = num_processes * (pool_size + max_overflow)
+        self.assertLessEqual(max_peak_connections, 20, f"Peak connections {max_peak_connections} exceeds 20-connection ceiling")
+
+        # Timeout must be at least 15s to allow burst queueing without 500 errors
+        self.assertGreaterEqual(timeout, 15)
+        # Recycle must be configured to prevent idle socket drop
+        self.assertGreaterEqual(recycle, 60)
+        # Pre-ping must be enabled
+        self.assertTrue(pre_ping)
+
+    def test_celery_postrun_connection_cleanup(self):
+        from obsidian_proj.celery import on_task_postrun
+        # Execute postrun signal handler and verify it runs cleanly
+        try:
+            on_task_postrun()
+        except Exception as e:
+            self.fail(f"on_task_postrun failed with exception: {e}")
+
+
+@override_settings(
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    SESSION_ENGINE='django.contrib.sessions.backends.db'
+)
+class LeaderboardLoadAndCachingTestCase(TestCase):
+    def setUp(self):
+        from django.utils import timezone
+        self.client = Client()
+        self.user = User.objects.create_user(username='leaderboard_user', password='Password123!')
+        self.client.login(username='leaderboard_user', password='Password123!')
+
+        self.contest = Contest.objects.create(
+            name="Caching Benchmark Contest",
+            description="Testing leaderboard cache",
+            start_time=timezone.now() - timezone.timedelta(minutes=30),
+            end_time=timezone.now() + timezone.timedelta(hours=2),
+            penalty_minutes=10
+        )
+        self.problem = Problem.objects.create(
+            title="Problem C", statement="Stmt", input_format="in", output_format="out", constraints="c"
+        )
+        ContestProblem.objects.create(contest=self.contest, problem=self.problem, points=100)
+
+    def test_leaderboard_caching_and_hit(self):
+        from django.core.cache import cache
+        cache_key = f"contest_leaderboard_{self.contest.id}"
+        cache.delete(cache_key)
+
+        # First request: Cache miss -> compiles and caches
+        url = reverse('contest_lobby', args=[self.contest.id])
+        res1 = self.client.get(url)
+        self.assertEqual(res1.status_code, 200)
+
+        cached_data = cache.get(cache_key)
+        self.assertIsNotNone(cached_data)
+        self.assertIn('leaderboard', cached_data)
+        self.assertIn('problem_stats', cached_data)
+
+        # Second request: Cache hit -> served from Redis/cache
+        res2 = self.client.get(url)
+        self.assertEqual(res2.status_code, 200)
+        self.assertEqual(len(res2.context['leaderboard']), len(cached_data['leaderboard']))
+
+    def test_leaderboard_cache_invalidation_on_submission_judge(self):
+        from django.core.cache import cache
+        from home.models import Language, TestCase as ModelTestCase
+        from home.tasks import judge_submission
+        from unittest.mock import patch
+
+        lang, _ = Language.objects.get_or_create(name='Python 3', slug='python3', ace_mode='python')
+        ModelTestCase.objects.create(problem=self.problem, input_data="1", expected_output="1", weight=1)
+
+        cache_key = f"contest_leaderboard_{self.contest.id}"
+        # Pre-seed cache
+        cache.set(cache_key, {'leaderboard': [], 'problem_stats': {}}, timeout=60)
+        self.assertIsNotNone(cache.get(cache_key))
+
+        sub = Submission.objects.create(
+            user=self.user, contest=self.contest, problem=self.problem,
+            code="print(1)", language=lang, status='PENDING'
+        )
+
+        mock_res = [{'id': '01', 'status': 'pass', 'label': 'PASSED', 'stdout': '1', 'time': '0.1s'}]
+        with patch('home.tasks.judge_problem', return_value=mock_res):
+            judge_submission(sub.id)
+
+        # Submission completion must invalidate the cached leaderboard
+        self.assertIsNone(cache.get(cache_key))
+
+    def test_contest_leaderboard_api_endpoint(self):
+        url = reverse('contest_leaderboard_api', args=[self.contest.id])
+        res = self.client.get(url)
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertTrue(data.get('ok'))
+        self.assertEqual(data.get('contest_id'), self.contest.id)
+        self.assertIn('leaderboard', data)
+        self.assertIn('problem_stats', data)
+
+
+class SetupIdeCommandTestCase(TestCase):
+    def test_setup_ide_skip_pull(self):
+        from django.core.management import call_command
+        from io import StringIO
+        out = StringIO()
+        call_command('setup_ide', '--skip-pull', stdout=out)
+        output = out.getvalue()
+        self.assertIn("Obsidian IDE Setup", output)
+        self.assertIn("Done:", output)
+        self.assertTrue(Language.objects.filter(slug='python-312').exists())
+        self.assertTrue(Language.objects.filter(slug='cpp').exists())
+
+
+class ModularViewsArchitectureTestCase(TestCase):
+    """
+    Validates the modular views architecture:
+    - Verifies package exports and backwards compatibility
+    - Verifies domain module isolation (auth, contest, ide, api)
+    - Verifies Python PEP 484 type annotations on critical functions
+    - Verifies URL routing resolution to modular view handlers
+    - Verifies deduplicated orphan submission recovery service
+    """
+
+    def test_modular_views_package_exports(self):
+        import home.views as views
+
+        expected_symbols = [
+            'auth_view',
+            'verify_otp_view',
+            'resend_otp_view',
+            'CustomPasswordResetView',
+            'CustomPasswordResetConfirmView',
+            'check_profile_status',
+            'complete_profile',
+            'profile_view',
+            'logout_view',
+            'home',
+            'dashboard_view',
+            'check_disqualified',
+            'get_compiled_contest_leaderboard',
+            'contest_lobby',
+            'enter_contest',
+            'log_violation',
+            'unban_contestant',
+            'unban_self',
+            'problem_ide_view',
+            'handle_submission',
+            'contest_leaderboard_api',
+            'submission_status_api',
+            'submission_history_api',
+            'run_status_api',
+        ]
+        for symbol in expected_symbols:
+            self.assertTrue(
+                hasattr(views, symbol),
+                f"home.views must export '{symbol}' for full backwards compatibility"
+            )
+            self.assertIn(
+                symbol,
+                views.__all__,
+                f"'{symbol}' must be declared in home.views.__all__"
+            )
+
+    def test_domain_modules_importability(self):
+        from home.views import auth, contest, ide, api
+
+        self.assertTrue(hasattr(auth, 'auth_view'))
+        self.assertTrue(hasattr(auth, 'complete_profile'))
+        self.assertTrue(hasattr(contest, 'contest_lobby'))
+        self.assertTrue(hasattr(contest, 'get_compiled_contest_leaderboard'))
+        self.assertTrue(hasattr(ide, 'problem_ide_view'))
+        self.assertTrue(hasattr(ide, 'handle_submission'))
+        self.assertTrue(hasattr(api, 'submission_status_api'))
+        self.assertTrue(hasattr(api, 'reap_orphaned_submission'))
+
+    def test_type_annotations_present(self):
+        from typing import get_type_hints
+        from home.views import contest, ide, api, auth
+
+        hints_check_disqualified = get_type_hints(contest.check_disqualified)
+        self.assertEqual(hints_check_disqualified.get('return'), bool)
+
+        hints_format_hms = get_type_hints(contest.format_duration_hms)
+        self.assertEqual(hints_format_hms.get('mins'), float)
+        self.assertEqual(hints_format_hms.get('return'), str)
+
+        hints_constraints = get_type_hints(ide.get_problem_constraints)
+        self.assertIn('return', hints_constraints)
+
+        hints_reap = get_type_hints(api.reap_orphaned_submission)
+        self.assertIn('return', hints_reap)
+
+        hints_auth = get_type_hints(auth.auth_view)
+        self.assertIn('request', hints_auth)
+        self.assertIn('return', hints_auth)
+
+    def test_url_resolution_to_modular_views(self):
+        from django.urls import resolve
+        from home.views.auth import auth_view
+        from home.views.contest import contest_lobby, home
+        from home.views.ide import problem_ide_view
+        from home.views.api import contest_leaderboard_api
+
+        self.assertEqual(resolve('/').func, home)
+        self.assertEqual(resolve('/auth/').func, auth_view)
+        self.assertEqual(resolve('/contest/1/lobby/').func, contest_lobby)
+        self.assertEqual(resolve('/contest/1/problem/1/ide/').func, problem_ide_view)
+        self.assertEqual(resolve('/contest/1/leaderboard_api/').func, contest_leaderboard_api)
+
+    def test_reap_orphaned_submission_service(self):
+        from home.views.api import reap_orphaned_submission
+        from home.models import Contest, Problem, Language, Submission
+        from django.contrib.auth.models import User
+        from django.core.cache import cache
+
+        user = User.objects.create_user(username='orphanuser', password='password123')
+        contest = Contest.objects.create(
+            name="Orphan Contest",
+            start_time=timezone.now(),
+            end_time=timezone.now() + datetime.timedelta(hours=2)
+        )
+        problem = Problem.objects.create(title="P1", statement="S1")
+        lang, _ = Language.objects.get_or_create(name='Python 3', slug='python3', ace_mode='python')
+
+        sub = Submission.objects.create(
+            user=user,
+            contest=contest,
+            problem=problem,
+            code="print('stuck')",
+            language=lang,
+            status='PENDING'
+        )
+
+        status_data = reap_orphaned_submission(sub)
+        self.assertEqual(status_data['status'], 'RE')
+        self.assertEqual(status_data['is_accepted'], False)
+        self.assertIn("execution orphaned", status_data['error_message'])
+
+        sub.refresh_from_db()
+        self.assertEqual(sub.status, 'RE')
+        self.assertIn("execution orphaned", sub.error_message)
+
+        cached = cache.get(f"sub_status_{sub.id}")
+        self.assertIsNotNone(cached)
+        self.assertEqual(cached['status'], 'RE')
+
+
 

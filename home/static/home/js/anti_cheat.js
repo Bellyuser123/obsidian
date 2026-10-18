@@ -7,8 +7,8 @@
     let strikes = parseInt(configEl.dataset.strikes, 10) || 0;
     const isAdmin = configEl.dataset.isAdmin === 'true';
 
-    // Fast-fail if already disqualified on load
-    if (strikes >= 3 && !isAdmin) {
+    // Fast-fail if already disqualified on load (banned on 4th strike)
+    if (strikes >= 4 && !isAdmin) {
         triggerDisqualification();
         return;
     }
@@ -132,7 +132,7 @@
                         Any deviation from the active contest page is logged.
                     </p>
                     <div id="proctor-strikes-label" style="font-family: 'Press Start 2P', monospace; font-size: 11px; padding: 10px; background: rgba(255,64,96,0.1); border: 1px dashed rgba(255,64,96,0.3); margin-bottom: 25px; color: #ff4060;">
-                        STRIKES: ${currentStrikes} / 3
+                        STRIKES: ${currentStrikes} / 3 ${currentStrikes >= 3 ? '(FINAL WARNING: 4TH INFRACTION BANS)' : ''}
                     </div>
                     <button id="resume-proctor-btn" style="font-family: 'Press Start 2P', monospace; font-size: 9px; padding: 12px 24px; background: #ff4060; color: #110808; border: none; cursor: none !important; clip-path: polygon(0 0, calc(100% - 4px) 0, 100% 4px, 100% 100%, 4px 100%, 0 calc(100% - 4px)); font-weight: bold;">
                         RESUME CONTEST
@@ -143,7 +143,7 @@
 
             modal.querySelector('#resume-proctor-btn').addEventListener('click', enterFullscreen);
         } else {
-            modal.querySelector('#proctor-strikes-label').textContent = `STRIKES: ${currentStrikes} / 3`;
+            modal.querySelector('#proctor-strikes-label').textContent = `STRIKES: ${currentStrikes} / 3 ${currentStrikes >= 3 ? '(FINAL WARNING: 4TH INFRACTION BANS)' : ''}`;
             modal.style.display = 'flex';
         }
         

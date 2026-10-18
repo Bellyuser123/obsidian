@@ -120,6 +120,14 @@ class Contest(models.Model):
     description = models.TextField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
+    host = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='hosted_contests',
+        help_text="Host / Organizer of the contest. The host cannot be banned and has contest management permissions."
+    )
     passkey = models.CharField(max_length=50, blank=True, null=True)
     tags = models.CharField(max_length=200, blank=True, help_text="Comma-separated tags (e.g. AI, WEB, DSA)")
     prize = models.CharField(max_length=100, blank=True, help_text="Prize pool info")
@@ -128,6 +136,55 @@ class Contest(models.Model):
     enable_anti_cheat = models.BooleanField(default=True, help_text="Master toggle for the anti-cheat proctoring framework.")
 
     problems = models.ManyToManyField(Problem, through='ContestProblem', related_name='contests')
+
+    @property
+    def proctor_mode(self):
+        """Alias for enable_anti_cheat representing proctor mode."""
+        return self.enable_anti_cheat
+
+    @proctor_mode.setter
+    def proctor_mode(self, value):
+        self.enable_anti_cheat = value
+
+    def is_live(self):
+        from django.utils import timezone
+        now = timezone.now()
+        return self.start_time <= now <= self.end_time
+
+    def is_ended(self):
+        from django.utils import timezone
+        return timezone.now() > self.end_time
+
+    def is_host_or_admin(self, user):
+        if not user or not user.is_authenticated:
+            return False
+        if user.is_superuser or user.is_staff:
+            return True
+        return self.host_id is not None and self.host_id == user.id
+
+    def reset_banned_list(self):
+        """Resets all banned/disqualified contestants and deletes their violation logs for this contest."""
+        self.participations.filter(is_disqualified=True).update(is_disqualified=False)
+        self.violations.all().delete()
+
+    def restart_contest(self, new_start_time=None, new_end_time=None):
+        """Restarts the contest with optional new start and end times, resetting all bans and strikes."""
+        if new_start_time:
+            self.start_time = new_start_time
+        if new_end_time:
+            self.end_time = new_end_time
+        self.save()
+        self.reset_banned_list()
+
+    def save(self, *args, **kwargs):
+        # When contest start_time changes or contest is restarted, reset the banned list
+        if self.pk:
+            old = Contest.objects.filter(pk=self.pk).values('start_time').first()
+            if old and old['start_time'] != self.start_time:
+                super().save(*args, **kwargs)
+                self.reset_banned_list()
+                return
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
