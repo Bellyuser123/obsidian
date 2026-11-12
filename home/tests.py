@@ -498,7 +498,7 @@ class TestCaseValidationAndScoringTests(TestCase):
             res = self.client.post(url, {'violation_type': 'TAB_SWITCH', 'details': 'Host switched tab'})
             self.assertEqual(res.status_code, 200)
             data = res.json()
-            self.assertEqual(data.get('action'), 'NONE')
+            self.assertIn(data.get('action'), ['IGNORE', 'NONE'])
 
         self.assertEqual(ViolationLog.objects.filter(user=host_user, contest=contest).count(), 0)
         participation = ContestParticipation.objects.filter(user=host_user, contest=contest).first()
@@ -1255,6 +1255,362 @@ class ModularViewsArchitectureTestCase(TestCase):
         cached = cache.get(f"sub_status_{sub.id}")
         self.assertIsNotNone(cached)
         self.assertEqual(cached['status'], 'RE')
+
+
+@override_settings(
+    CACHES={'default': {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}},
+    SESSION_ENGINE='django.contrib.sessions.backends.db'
+)
+class MultiTenantArchitectureTestCase(TestCase):
+    """
+    Test suite for Sprint 1 of Obsidian Enterprise Multi-Tenant Architecture:
+    - Profile roll_no overlap across organizations
+    - Cross-contest contextual role isolation (Host in Contest A, Contestant in Contest B)
+    - Prevention of hosts/judges submitting solutions in their own contests (HTTP 403)
+    - Superuser test-mode bypass rules
+    - HostApplication admin approval action and organization auto-provisioning
+    - Slug collision resolution
+    - Organization owner/admin permission inheritance and proctor immunity
+    """
+
+    def setUp(self):
+        from unittest.mock import patch
+        self.patcher_judge = patch('home.views.ide.judge_submission.delay')
+        self.mock_judge = self.patcher_judge.start()
+        self.client = Client()
+
+        self.superuser = User.objects.create_superuser(
+            username='platform_super',
+            email='admin@obsidian.codes',
+            password='adminpassword123'
+        )
+
+        now = timezone.now()
+        self.lang, _ = Language.objects.get_or_create(
+            slug='python3',
+            defaults={'name': 'Python 3', 'ace_mode': 'python', 'docker_image': 'python:3.12-slim'}
+        )
+
+        self.problem = Problem.objects.create(
+            title="Two Sum Multi",
+            statement="Sum two numbers",
+            input_format="a b",
+            output_format="sum",
+            constraints="1 <= a, b <= 100",
+            visibility='PUBLIC'
+        )
+
+        self.contest_a = Contest.objects.create(
+            name="Contest Alpha",
+            description="Contest A",
+            start_time=now - datetime.timedelta(hours=1),
+            end_time=now + datetime.timedelta(hours=2),
+            enable_anti_cheat=True
+        )
+        ContestProblem.objects.create(contest=self.contest_a, problem=self.problem, points=100)
+
+        self.contest_b = Contest.objects.create(
+            name="Contest Beta",
+            description="Contest B",
+            start_time=now - datetime.timedelta(hours=1),
+            end_time=now + datetime.timedelta(hours=2),
+            enable_anti_cheat=True
+        )
+        ContestProblem.objects.create(contest=self.contest_b, problem=self.problem, points=100)
+
+    def tearDown(self):
+        self.patcher_judge.stop()
+
+    def test_profile_overlapping_roll_numbers(self):
+        """Validates that students from different colleges can share identical roll numbers."""
+        from home.models import Profile
+
+        u1 = User.objects.create_user(username='student_harvard', password='pass123', email='u1@harvard.edu')
+        u2 = User.objects.create_user(username='student_oxford', password='pass123', email='u2@oxford.ac.uk')
+
+        u1.profile.roll_no = 'CS_2026_001'
+        u1.profile.save()
+
+        u2.profile.roll_no = 'CS_2026_001'
+        u2.profile.save()
+
+        self.assertEqual(Profile.objects.filter(roll_no='CS_2026_001').count(), 2)
+
+    def test_contextual_role_isolation(self):
+        """Validates that a user can be HOST in Contest A and CONTESTANT in Contest B simultaneously."""
+        from home.permissions import is_contest_staff, can_manage_contest, can_compete_in_contest
+        from home.models import ContestParticipation
+
+        alice = User.objects.create_user(username='alice_dual', password='password123')
+        ContestParticipation.objects.create(user=alice, contest=self.contest_a, role='HOST')
+        ContestParticipation.objects.create(user=alice, contest=self.contest_b, role='CONTESTANT')
+
+        # Contest A assertions (Alice is HOST)
+        self.assertTrue(is_contest_staff(alice, self.contest_a))
+        self.assertTrue(can_manage_contest(alice, self.contest_a))
+        self.assertFalse(can_compete_in_contest(alice, self.contest_a))
+
+        # Contest B assertions (Alice is CONTESTANT)
+        self.assertFalse(is_contest_staff(alice, self.contest_b))
+        self.assertFalse(can_manage_contest(alice, self.contest_b))
+        self.assertTrue(can_compete_in_contest(alice, self.contest_b))
+
+    def test_host_and_staff_test_submission_and_leaderboard_exclusion(self):
+        """
+        Validates that a HOST or superuser CAN submit code to test problems,
+        the submission is flagged is_staff_test=True, and is excluded from leaderboard rankings.
+        """
+        import json
+        from home.models import ContestParticipation, Submission
+        from home.views.contest import get_compiled_contest_leaderboard
+        from django.core.cache import cache
+
+        host_user = User.objects.create_user(username='host_tester', password='password123')
+        ContestParticipation.objects.create(user=host_user, contest=self.contest_a, role='HOST')
+
+        student_user = User.objects.create_user(username='normal_student', password='password123')
+        ContestParticipation.objects.create(user=student_user, contest=self.contest_a, role='CONTESTANT')
+
+        self.client.login(username='host_tester', password='password123')
+
+        # Host submits in Contest A (Permitted test submission)
+        url_a = reverse('handle_submission', kwargs={'contest_id': self.contest_a.id, 'problem_id': self.problem.id})
+        res_a = self.client.post(
+            url_a,
+            data=json.dumps({'type': 'SUBMIT', 'code': 'print("host test")', 'language': 'python3'}),
+            content_type='application/json'
+        )
+        self.assertEqual(res_a.status_code, 200)
+        self.assertTrue(res_a.json().get('ok'))
+        sub_id = res_a.json().get('submission_id')
+        self.assertIsNotNone(sub_id)
+
+        host_sub = Submission.objects.get(id=sub_id)
+        self.assertTrue(host_sub.is_staff_test)
+
+        # Student submits in Contest A
+        self.client.login(username='normal_student', password='password123')
+        res_s = self.client.post(
+            url_a,
+            data=json.dumps({'type': 'SUBMIT', 'code': 'print("student")', 'language': 'python3'}),
+            content_type='application/json'
+        )
+        self.assertEqual(res_s.status_code, 200)
+        student_sub = Submission.objects.get(id=res_s.json().get('submission_id'))
+        self.assertFalse(student_sub.is_staff_test)
+
+        # Simulate graded scores on both submissions
+        host_sub.status = 'AC'
+        host_sub.is_accepted = True
+        host_sub.score_awarded = 100.0
+        host_sub.save()
+
+        student_sub.status = 'AC'
+        student_sub.is_accepted = True
+        student_sub.score_awarded = 100.0
+        student_sub.save()
+
+        # Invalidate cache and fetch leaderboard
+        cache.delete(f"contest_leaderboard_{self.contest_a.id}")
+        leaderboard, _ = get_compiled_contest_leaderboard(self.contest_a, [self.problem.id])
+
+        # Verify host is completely excluded from leaderboard rankings
+        leaderboard_user_ids = [entry['user_id'] for entry in leaderboard]
+        self.assertNotIn(host_user.id, leaderboard_user_ids)
+        self.assertIn(student_user.id, leaderboard_user_ids)
+
+    def test_promoted_staff_not_locked_out_by_disqualification(self):
+        """
+        Validates that a user with 3 strikes who is granted is_staff=True or HOST role
+        is immediately able to load the IDE with current_strikes=0 and is not locked out.
+        """
+        from home.models import ContestParticipation, ViolationLog
+        from home.views.contest import check_disqualified
+
+        contestant = User.objects.create_user(username='banned_then_promoted', password='password123')
+        participation = ContestParticipation.objects.create(
+            user=contestant,
+            contest=self.contest_a,
+            role='CONTESTANT',
+            is_disqualified=True
+        )
+        # Create 3 violation logs
+        for strike in range(1, 4):
+            ViolationLog.objects.create(
+                user=contestant,
+                contest=self.contest_a,
+                violation_type='TAB_SWITCH',
+                strike_number=strike
+            )
+
+        # Initially disqualified as contestant
+        self.assertTrue(check_disqualified(contestant, self.contest_a))
+
+        # Promote to HOST
+        participation.role = 'HOST'
+        participation.save()
+
+        # check_disqualified must now return False
+        self.assertFalse(check_disqualified(contestant, self.contest_a))
+
+        # Load IDE view
+        self.client.login(username='banned_then_promoted', password='password123')
+        url_ide = reverse('problem_ide', kwargs={'contest_id': self.contest_a.id, 'problem_id': self.problem.id})
+        res = self.client.get(url_ide)
+
+        # Must not receive 403 or disqualified template
+        self.assertEqual(res.status_code, 200)
+        self.assertTemplateNotUsed(res, 'home/disqualified.html')
+        self.assertEqual(res.context['CURRENT_STRIKES'], 0)
+        self.assertFalse(res.context['is_disqualified'])
+        self.assertTrue(res.context['IS_CONTEST_STAFF'])
+
+    def test_staff_test_submission_does_not_increment_profile_score(self):
+        """Grading an is_staff_test submission evaluates verdicts without altering global profile score."""
+        from unittest.mock import patch
+        from home.tasks import judge_submission
+        from home.models import TestCase as TestCaseModel, Profile, Submission
+
+        host = User.objects.create_user(username='host_scoring_test', password='password123')
+        profile, _ = Profile.objects.get_or_create(user=host)
+        profile.total_score = 0
+        profile.save()
+
+        TestCaseModel.objects.create(problem=self.problem, input_data='1 2', expected_output='3', weight=10)
+
+        sub = Submission.objects.create(
+            user=host,
+            contest=self.contest_a,
+            problem=self.problem,
+            code="print(3)",
+            language=self.lang,
+            status='PENDING',
+            is_staff_test=True
+        )
+
+        with patch('home.tasks.judge_problem') as mock_judge_exec:
+            mock_judge_exec.return_value = [{'id': 1, 'status': 'pass', 'label': 'CORRECT', 'time': '0.01s', 'mem_kb': 100}]
+            judge_submission(sub.id)
+
+        sub.refresh_from_db()
+        self.assertEqual(sub.status, 'AC')
+        self.assertEqual(sub.score_awarded, 100.0)
+
+        profile.refresh_from_db()
+        self.assertEqual(profile.total_score, 0)
+
+    def test_superuser_test_bypass_rule(self):
+        """Superuser retains competitor test bypass unless explicitly registered as HOST in ContestParticipation."""
+        from home.permissions import can_compete_in_contest
+        from home.models import ContestParticipation
+
+        # Implicit bypass
+        self.assertTrue(can_compete_in_contest(self.superuser, self.contest_a))
+
+        # Explicit HOST registration disables competitor status
+        ContestParticipation.objects.create(user=self.superuser, contest=self.contest_a, role='HOST')
+        self.assertFalse(can_compete_in_contest(self.superuser, self.contest_a))
+
+    def test_host_application_approval_and_auto_provisioning(self):
+        """Validates that approving a HostApplication provisions Organization, Membership, and AuditLog."""
+        from django.contrib.admin.sites import AdminSite
+        from home.admin import HostApplicationAdmin
+        from home.models import HostApplication, Organization, OrganizationMembership, AuditLog
+
+        applicant = User.objects.create_user(username='applicant_mit', password='password123')
+        app = HostApplication.objects.create(
+            user=applicant,
+            organization_name="MIT Algorithmic Society",
+            org_type='CLUB',
+            official_email_or_proof="cs@mit.edu proof link",
+            status='PENDING'
+        )
+
+        class DummyRequest:
+            def __init__(self, superuser):
+                self.user = superuser
+
+        req = DummyRequest(self.superuser)
+        admin_instance = HostApplicationAdmin(HostApplication, AdminSite())
+        admin_instance.message_user = lambda request, message: None
+
+        admin_instance.approve_selected_applications(req, HostApplication.objects.filter(id=app.id))
+
+        app.refresh_from_db()
+        self.assertEqual(app.status, 'APPROVED')
+        self.assertEqual(app.reviewed_by, self.superuser)
+        self.assertIsNotNone(app.reviewed_at)
+
+        # Organization check
+        org = Organization.objects.get(slug='mit-algorithmic-society')
+        self.assertEqual(org.name, "MIT Algorithmic Society")
+        self.assertEqual(org.verification_status, 'APPROVED')
+        self.assertEqual(org.created_by, applicant)
+
+        # Membership check
+        membership = OrganizationMembership.objects.get(user=applicant, organization=org)
+        self.assertEqual(membership.role, 'OWNER')
+        self.assertTrue(membership.is_active)
+
+        # AuditLog check
+        self.assertTrue(AuditLog.objects.filter(
+            actor=self.superuser,
+            organization=org,
+            action='HOST_APPLICATION_APPROVED'
+        ).exists())
+
+    def test_slug_collision_resolution(self):
+        """Validates that duplicate organization names receive unique incremental slugs upon approval."""
+        from django.contrib.admin.sites import AdminSite
+        from home.admin import HostApplicationAdmin
+        from home.models import HostApplication, Organization
+
+        Organization.objects.create(name="Stanford AI", slug="stanford-ai", org_type='CLUB')
+
+        applicant2 = User.objects.create_user(username='applicant_stanford2', password='password123')
+        app2 = HostApplication.objects.create(
+            user=applicant2,
+            organization_name="Stanford AI",
+            org_type='CLUB',
+            official_email_or_proof="proof",
+            status='PENDING'
+        )
+
+        class DummyRequest:
+            def __init__(self, user):
+                self.user = user
+
+        req = DummyRequest(self.superuser)
+        admin_instance = HostApplicationAdmin(HostApplication, AdminSite())
+        admin_instance.message_user = lambda request, msg: None
+
+        admin_instance.approve_selected_applications(req, HostApplication.objects.filter(id=app2.id))
+
+        self.assertTrue(Organization.objects.filter(slug='stanford-ai-1').exists())
+
+    def test_organization_owner_contest_staff_immunity(self):
+        """Organization owners are recognized as contest staff and immune to proctoring strikes."""
+        from home.models import Organization, OrganizationMembership, ViolationLog
+        from home.permissions import is_contest_staff, can_manage_contest
+
+        owner = User.objects.create_user(username='org_head', password='password123')
+        org = Organization.objects.create(name="IIT Tech Council", slug="iit-tech-council")
+        OrganizationMembership.objects.create(user=owner, organization=org, role='OWNER', is_active=True)
+
+        self.contest_a.organization = org
+        self.contest_a.save()
+
+        self.assertTrue(is_contest_staff(owner, self.contest_a))
+        self.assertTrue(can_manage_contest(owner, self.contest_a))
+
+        self.client.login(username='org_head', password='password123')
+        url_violation = reverse('log_violation', kwargs={'contest_id': self.contest_a.id})
+        res = self.client.post(url_violation, {'violation_type': 'TAB_SWITCH'})
+        self.assertEqual(res.status_code, 200)
+        self.assertIn(res.json().get('action'), ['IGNORE', 'NONE'])
+        self.assertEqual(res.json().get('current_strikes'), 0)
+        self.assertEqual(ViolationLog.objects.filter(user=owner, contest=self.contest_a).count(), 0)
+
 
 
 

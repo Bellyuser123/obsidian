@@ -187,17 +187,19 @@ def judge_submission(submission_id):
         submission.save()
 
         # 7. Update Profile Score (only add the difference if they improved over best previous)
-        best_previous = Submission.objects.filter(
-            user=submission.user, contest=submission.contest, problem=problem
-        ).exclude(id=submission.id).aggregate(Max('score_awarded'))['score_awarded__max'] or 0.0
+        # Exclude staff test submissions from incrementing global Profile score/solved count
+        if not getattr(submission, 'is_staff_test', False):
+            best_previous = Submission.objects.filter(
+                user=submission.user, contest=submission.contest, problem=problem, is_staff_test=False
+            ).exclude(id=submission.id).aggregate(Max('score_awarded'))['score_awarded__max'] or 0.0
 
-        # Account for previous score on this exact submission in case of re-judging
-        effective_previous = max(best_previous, old_submission_score)
+            # Account for previous score on this exact submission in case of re-judging
+            effective_previous = max(best_previous, old_submission_score)
 
-        if base_score > effective_previous:
-            diff = int(round(base_score)) - int(round(effective_previous))
-            if diff > 0:
-                Profile.objects.filter(id=profile.id).update(total_score=F('total_score') + diff)
+            if base_score > effective_previous:
+                diff = int(round(base_score)) - int(round(effective_previous))
+                if diff > 0:
+                    Profile.objects.filter(id=profile.id).update(total_score=F('total_score') + diff)
 
     # Scrub hidden test case actual outputs before caching for client-side display
     for idx, tc in enumerate(all_cases):

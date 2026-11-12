@@ -13,18 +13,26 @@
         return;
     }
 
-    // State Transitions Grace Period (Phase 3)
-    let gracePeriodActive = true;
+    // 1. Initial page-load grace period (3000ms) - opening question never triggers false strike
+    let pageLoadGracePeriod = true;
     setTimeout(() => {
-        gracePeriodActive = false;
+        pageLoadGracePeriod = false;
     }, 3000);
 
-    function activateGracePeriod(duration) {
-        gracePeriodActive = true;
-        setTimeout(() => {
-            gracePeriodActive = false;
-        }, duration);
+    // 2. Transition grace period: ONLY activated when entering fullscreen
+    let transitionGracePeriod = false;
+    let transitionTimer = null;
+    function activateTransitionGracePeriod(duration) {
+        transitionGracePeriod = true;
+        if (transitionTimer) clearTimeout(transitionTimer);
+        transitionTimer = setTimeout(() => {
+            transitionGracePeriod = false;
+        }, duration || 2000);
     }
+
+    // 3. Debounce window for rapid successive events (e.g. Alt+Tab firing both fullscreen exit & blur)
+    let lastViolationTime = 0;
+    const DEBOUNCE_MS = 1000;
 
     // 1. CSS Injection for user-select freeze
     const style = document.createElement('style');
@@ -49,10 +57,23 @@
 
     // 3. Telemetry violation submission
     function reportViolation(type, details) {
-        if (gracePeriodActive && type !== 'FULLSCREEN') {
-            console.log(`[PROCTOR] Discarding infraction of type ${type} during grace period.`);
+        if (pageLoadGracePeriod) {
+            console.log(`[PROCTOR] Discarding infraction of type ${type} during initial page load grace period.`);
             return;
         }
+
+        if (transitionGracePeriod) {
+            console.log(`[PROCTOR] Discarding infraction of type ${type} during fullscreen entry transition grace period.`);
+            return;
+        }
+
+        const now = Date.now();
+        if (now - lastViolationTime < DEBOUNCE_MS) {
+            console.log(`[PROCTOR] Debounced violation of type ${type} (${now - lastViolationTime}ms < ${DEBOUNCE_MS}ms).`);
+            return;
+        }
+        lastViolationTime = now;
+
         const formData = new FormData();
         formData.append('violation_type', type);
         formData.append('details', details || '');
@@ -69,14 +90,15 @@
         .then(data => {
             if (data.action === 'BAN') {
                 if (isAdmin) {
-                    console.log("[PROCTOR] Admin user bypasses BAN action.");
-                    showWarningModal(3);
+                    console.log("[PROCTOR] Admin/Staff user bypasses BAN action.");
                 } else {
                     triggerDisqualification();
                 }
             } else if (data.action === 'WARN') {
                 strikes = data.current_strikes;
                 showWarningModal(strikes);
+            } else if (data.action === 'IGNORE' || data.action === 'NONE') {
+                console.log("[PROCTOR] Staff or exempt action ignored.");
             }
         })
         .catch(err => {
@@ -86,6 +108,8 @@
 
     // Disqualification layout trigger
     function triggerDisqualification() {
+        if (isAdmin) return;
+
         const mainEl = document.querySelector('main');
         if (mainEl) {
             mainEl.innerHTML = `
@@ -107,6 +131,8 @@
 
     // 4. Modal Warning View
     function showWarningModal(currentStrikes) {
+        if (isAdmin) return;
+
         let modal = document.getElementById('proctor-warning-modal');
         if (!modal) {
             modal = document.createElement('div');
@@ -166,6 +192,8 @@
 
     // 5. Fullscreen Demander Overlay
     function showFullscreenModal() {
+        if (isAdmin) return;
+
         let modal = document.getElementById('proctor-fullscreen-modal');
         if (!modal) {
             modal = document.createElement('div');
@@ -234,28 +262,32 @@
         }
     }
 
-    // 6. Fullscreen Change Handler (Phase 3)
+    // 6. Fullscreen Change Handler: Transition grace period ONLY on ENTERING fullscreen
     document.addEventListener('fullscreenchange', function() {
-        activateGracePeriod(2000);
-        if (!document.fullscreenElement && strikes < 3) {
-            reportViolation('FULLSCREEN', 'Participant exited fullscreen mode.');
-            showFullscreenModal();
+        if (document.fullscreenElement) {
+            // ENTERING fullscreen: activate transition grace period
+            activateTransitionGracePeriod(2000);
+            hideFullscreenModal();
+        } else {
+            // EXITING fullscreen: immediately report violation (no transition grace period!)
+            if (!pageLoadGracePeriod) {
+                reportViolation('FULLSCREEN', 'Participant exited fullscreen mode.');
+                showFullscreenModal();
+            }
         }
     });
 
     // 7. Focus & Visibility Observers
     document.addEventListener('visibilitychange', function() {
-        if (document.hidden && strikes < 3) {
+        if (document.hidden) {
             reportViolation('TAB_SWITCH', 'Participant switched tabs/minimized window.');
             showWarningModal(strikes + 1);
         }
     });
 
     window.addEventListener('blur', function() {
-        if (strikes < 3) {
-            reportViolation('TAB_SWITCH', 'Participant lost focus on the contest window.');
-            showWarningModal(strikes + 1);
-        }
+        reportViolation('TAB_SWITCH', 'Participant lost focus on the contest window.');
+        showWarningModal(strikes + 1);
     });
 
     // 8. Key interception
@@ -277,11 +309,10 @@
         }
     }, true);
 
-    // 9. Low-overhead debugger loop (Phase 3)
+    // 9. Low-overhead debugger loop
     setInterval(function() {
-        if (strikes >= 3) return;
         if (document.hidden || !document.hasFocus()) return;
-        if (gracePeriodActive) return;
+        if (pageLoadGracePeriod || transitionGracePeriod) return;
 
         const start = performance.now();
         debugger;
@@ -367,7 +398,7 @@
     }
 
     // Initial triggers on load
-    if (!document.fullscreenElement) {
+    if (!document.fullscreenElement && !isAdmin) {
         showFullscreenModal();
     }
 })();

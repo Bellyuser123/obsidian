@@ -26,6 +26,7 @@ from home.models import (
 )
 from home.rule_checker import check_rules
 from home.tasks import judge_submission, run_code_task
+from home.permissions import is_contest_staff, can_compete_in_contest
 from .contest import check_disqualified
 
 
@@ -71,7 +72,8 @@ def problem_ide_view(request: HttpRequest, contest_id: int, problem_id: int) -> 
         return render(request, 'home/disqualified.html', {'contest': contest}, status=403)
 
     if request.user.is_authenticated:
-        ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
+        role = 'HOST' if (contest.host_id and contest.host_id == request.user.id) else 'CONTESTANT'
+        ContestParticipation.objects.get_or_create(user=request.user, contest=contest, defaults={'role': role})
 
     cp = get_object_or_404(ContestProblem, contest=contest, problem__id=problem_id)
     problem = cp.problem
@@ -109,9 +111,16 @@ def problem_ide_view(request: HttpRequest, contest_id: int, problem_id: int) -> 
         stubs_dict[stub.language.slug] = stub.starter_code
     code_stubs_json = json.dumps(stubs_dict)
 
-    current_strikes = 0
-    if request.user.is_authenticated:
-        current_strikes = ViolationLog.objects.filter(user=request.user, contest=contest).count()
+    is_staff = is_contest_staff(request.user, contest)
+    if is_staff:
+        current_strikes = 0
+        is_user_disqualified = False
+    else:
+        current_strikes = 0
+        if request.user.is_authenticated:
+            current_strikes = ViolationLog.objects.filter(user=request.user, contest=contest).count()
+        participation = ContestParticipation.objects.filter(user=request.user, contest=contest).first()
+        is_user_disqualified = bool(participation and participation.is_disqualified)
 
     context = {
         'contest': contest,
@@ -126,6 +135,8 @@ def problem_ide_view(request: HttpRequest, contest_id: int, problem_id: int) -> 
         'code_stubs_json': code_stubs_json,
         'ANTI_CHEAT_ENABLED': contest.enable_anti_cheat,
         'CURRENT_STRIKES': current_strikes,
+        'is_disqualified': is_user_disqualified,
+        'IS_CONTEST_STAFF': is_staff,
     }
     return render(request, 'home/problem_ide.html', context)
 
@@ -193,6 +204,7 @@ def handle_submission(request: HttpRequest, contest_id: int, problem_id: int) ->
         })
 
     elif action_type == 'SUBMIT':
+        is_staff = is_contest_staff(request.user, contest)
         submission = Submission.objects.create(
             user=request.user,
             contest=contest,
@@ -200,7 +212,8 @@ def handle_submission(request: HttpRequest, contest_id: int, problem_id: int) ->
             code=code,
             language=language,
             status='PENDING',
-            is_accepted=False
+            is_accepted=False,
+            is_staff_test=is_staff
         )
 
         # Populate initial cache for polling to consume immediately

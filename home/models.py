@@ -10,7 +10,7 @@ from django.dispatch import receiver
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     full_name = models.CharField(max_length=100, blank=True, null=True)
-    roll_no = models.CharField(max_length=30, blank=True, null=True, unique=True)
+    roll_no = models.CharField(max_length=30, blank=True, null=True, db_index=True)
     is_profile_complete = models.BooleanField(default=False)
     total_score = models.IntegerField(default=0)
     is_disqualified = models.BooleanField(default=False)
@@ -52,6 +52,90 @@ def create_user_profile(sender, instance, created, **kwargs):
         )
 
 
+# --- MULTI-TENANCY & ORGANIZATIONS ---
+class Organization(models.Model):
+    ORG_TYPES = [
+        ('COLLEGE', 'College/University'),
+        ('CLUB', 'Student Club/Chapter'),
+        ('COMPANY', 'Company/Enterprise'),
+        ('INDEPENDENT', 'Independent Organizer'),
+    ]
+    VERIFICATION_STATUSES = [
+        ('PENDING', 'Pending Verification'),
+        ('APPROVED', 'Approved'),
+        ('SUSPENDED', 'Suspended'),
+    ]
+
+    name = models.CharField(max_length=150)
+    slug = models.SlugField(unique=True)
+    org_type = models.CharField(max_length=20, choices=ORG_TYPES, default='COLLEGE')
+    verification_status = models.CharField(max_length=20, choices=VERIFICATION_STATUSES, default='PENDING')
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_organizations'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.get_org_type_display()})"
+
+
+class OrganizationMembership(models.Model):
+    ROLE_CHOICES = [
+        ('OWNER', 'Owner'),
+        ('ADMIN', 'Admin'),
+        ('MEMBER', 'Member'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='org_memberships')
+    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name='memberships')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='MEMBER')
+    participant_id = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        help_text="e.g. Student ID or Employee ID"
+    )
+    is_active = models.BooleanField(default=True)
+    joined_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'organization')
+
+    def __str__(self):
+        return f"{self.user.username} - {self.organization.name} ({self.role})"
+
+
+class HostApplication(models.Model):
+    STATUS_CHOICES = [
+        ('PENDING', 'Pending'),
+        ('APPROVED', 'Approved'),
+        ('REJECTED', 'Rejected'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='host_applications')
+    organization_name = models.CharField(max_length=150)
+    org_type = models.CharField(max_length=20, choices=Organization.ORG_TYPES, default='COLLEGE')
+    official_email_or_proof = models.TextField(help_text="Official institution email or proof document/link")
+    reason = models.TextField(blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='PENDING')
+    reviewed_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='reviewed_host_applications'
+    )
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Host Application: {self.organization_name} by {self.user.username} ({self.status})"
+
+
 # --- NEW SUPPORT MODELS ---
 class Language(models.Model):
     """Supported languages for the IDE."""
@@ -73,6 +157,28 @@ class Problem(models.Model):
     input_format = models.TextField()
     output_format = models.TextField()
     constraints = models.TextField()
+
+    # Multi-tenancy & Organization Scoping
+    VISIBILITY_CHOICES = [
+        ('PUBLIC', 'Public'),
+        ('ORGANIZATION_PRIVATE', 'Organization Private'),
+        ('CONTEST_ONLY', 'Contest Only'),
+    ]
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='problems'
+    )
+    created_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_problems'
+    )
+    visibility = models.CharField(max_length=25, choices=VISIBILITY_CHOICES, default='PUBLIC')
 
     # NEW: Advanced Judging Logic
     is_special_judge = models.BooleanField(default=False,
@@ -120,6 +226,25 @@ class Contest(models.Model):
     description = models.TextField()
     start_time = models.DateTimeField()
     end_time = models.DateTimeField()
+    VISIBILITY_CHOICES = [
+        ('PUBLIC', 'Public'),
+        ('UNLISTED', 'Unlisted'),
+        ('PRIVATE', 'Private'),
+    ]
+    LIFECYCLE_CHOICES = [
+        ('DRAFT', 'Draft'),
+        ('PUBLISHED', 'Published'),
+        ('ARCHIVED', 'Archived'),
+    ]
+    organization = models.ForeignKey(
+        Organization,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='contests'
+    )
+    visibility = models.CharField(max_length=20, choices=VISIBILITY_CHOICES, default='PUBLIC')
+    lifecycle_status = models.CharField(max_length=20, choices=LIFECYCLE_CHOICES, default='PUBLISHED')
     host = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,
@@ -160,7 +285,15 @@ class Contest(models.Model):
             return False
         if user.is_superuser or user.is_staff:
             return True
-        return self.host_id is not None and self.host_id == user.id
+        if self.host_id is not None and self.host_id == user.id:
+            return True
+        if self.participations.filter(user=user, role__in=['HOST', 'JUDGE']).exists():
+            return True
+        if self.organization_id:
+            return self.organization.memberships.filter(
+                user=user, role__in=['OWNER', 'ADMIN'], is_active=True
+            ).exists()
+        return False
 
     def reset_banned_list(self):
         """Resets all banned/disqualified contestants and deletes their violation logs for this contest."""
@@ -327,6 +460,11 @@ class Submission(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='PENDING')
     is_accepted = models.BooleanField(default=False)
     time_submitted = models.DateTimeField(auto_now_add=True)
+    is_staff_test = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="True if submitted by a Host/Judge/Admin for testing; excluded from leaderboards."
+    )
 
     # Execution Stats
     execution_time = models.FloatField(default=0.0, help_text="Seconds")
@@ -346,6 +484,14 @@ class Submission(models.Model):
 class ContestParticipation(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contest_participations')
     contest = models.ForeignKey(Contest, on_delete=models.CASCADE, related_name='participations')
+    ROLE_CHOICES = [
+        ('CONTESTANT', 'Contestant'),
+        ('HOST', 'Host'),
+        ('JUDGE', 'Judge'),
+        ('SPECTATOR', 'Spectator'),
+    ]
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='CONTESTANT')
+    division = models.CharField(max_length=50, blank=True, null=True, help_text="e.g. Division 1, Division 2, Junior, Senior")
     is_disqualified = models.BooleanField(default=False, help_text="Designates whether the user is disqualified from this contest.")
     registered_at = models.DateTimeField(auto_now_add=True)
 
@@ -353,7 +499,7 @@ class ContestParticipation(models.Model):
         unique_together = ('user', 'contest')
 
     def __str__(self):
-        return f"{self.user.username} in {self.contest.name} (Disqualified: {self.is_disqualified})"
+        return f"{self.user.username} ({self.role}) in {self.contest.name} (Disqualified: {self.is_disqualified})"
 
 
 class ViolationLog(models.Model):
@@ -374,3 +520,39 @@ class ViolationLog(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.violation_type} (Strike {self.strike_number}) in {self.contest.name}"
+
+
+class ContestResult(models.Model):
+    contest = models.ForeignKey(Contest, on_delete=models.CASCADE, related_name='results')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='contest_results')
+    roll_no = models.CharField(max_length=50, blank=True, null=True)
+    division = models.CharField(max_length=50, blank=True, null=True)
+    problems_solved = models.IntegerField(default=0)
+    final_score = models.FloatField(default=0.0)
+    total_time_seconds = models.FloatField(default=0.0)
+    avg_exec_ms = models.FloatField(default=0.0)
+    overall_rank = models.IntegerField(default=0)
+    division_rank = models.IntegerField(default=0)
+    finalized_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('contest', 'user')
+        ordering = ['overall_rank']
+
+    def __str__(self):
+        return f"Rank {self.overall_rank}: {self.user.username} in {self.contest.name}"
+
+
+class AuditLog(models.Model):
+    actor = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    organization = models.ForeignKey(Organization, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    contest = models.ForeignKey(Contest, on_delete=models.SET_NULL, null=True, blank=True, related_name='audit_logs')
+    action = models.CharField(max_length=100)
+    details = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.created_at:%Y-%m-%d %H:%M}] {self.action} by {self.actor}"

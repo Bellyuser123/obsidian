@@ -27,6 +27,7 @@ from home.models import (
     UserProblemSession,
     ViolationLog,
 )
+from home.permissions import is_contest_staff, can_manage_contest
 
 
 def home(request: HttpRequest) -> HttpResponse:
@@ -88,8 +89,8 @@ def check_disqualified(user: Optional[User], contest: Contest) -> bool:
     if not user or not user.is_authenticated:
         return False
 
-    # Superuser, staff, or the contest host cannot be banned
-    if user.is_superuser or user.is_staff or (hasattr(contest, 'host_id') and contest.host_id and user.id == contest.host_id):
+    # Superuser, staff, or contest staff cannot be banned
+    if is_contest_staff(user, contest):
         return False
 
     # Banning should only be in contests where proctor mode is enabled
@@ -140,7 +141,25 @@ def get_compiled_contest_leaderboard(
     if cached is not None:
         return cached.get('leaderboard', []), cached.get('problem_stats', {})
 
-    all_subs = list(Submission.objects.filter(contest=contest).select_related('user', 'problem'))
+    # Identify staff, hosts, and judges to exclude from public leaderboards
+    staff_user_ids = set(
+        ContestParticipation.objects.filter(
+            contest=contest, role__in=['HOST', 'JUDGE']
+        ).values_list('user_id', flat=True)
+    )
+    if contest.host_id:
+        staff_user_ids.add(contest.host_id)
+    if contest.organization_id:
+        org_staff = contest.organization.memberships.filter(
+            role__in=['OWNER', 'ADMIN'], is_active=True
+        ).values_list('user_id', flat=True)
+        staff_user_ids.update(org_staff)
+
+    all_subs = list(
+        Submission.objects.filter(contest=contest, is_staff_test=False)
+        .exclude(user_id__in=staff_user_ids)
+        .select_related('user', 'problem')
+    )
     sorted_subs = sorted(all_subs, key=lambda s: s.time_submitted)
 
     subs_by_user_prob: Dict[Tuple[int, int], List[Submission]] = {}
@@ -266,7 +285,8 @@ def contest_lobby(request: HttpRequest, contest_id: int) -> HttpResponse:
         return render(request, 'home/disqualified.html', {'contest': contest}, status=403)
 
     if request.user.is_authenticated:
-        ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
+        role = 'HOST' if (contest.host_id and contest.host_id == request.user.id) else 'CONTESTANT'
+        ContestParticipation.objects.get_or_create(user=request.user, contest=contest, defaults={'role': role})
 
     now = timezone.now()
     is_live = contest.start_time <= now <= contest.end_time
@@ -305,7 +325,8 @@ def contest_lobby(request: HttpRequest, contest_id: int) -> HttpResponse:
         user_score = 0.0
         user_solved_count = len(solved_problems)
         user_rank: Union[int, str] = "-"
-        if request.user.is_authenticated:
+        is_staff_user = is_contest_staff(request.user, contest)
+        if request.user.is_authenticated and not is_staff_user:
             for rank, entry in enumerate(leaderboard, start=1):
                 if entry['user_id'] == request.user.id:
                     user_score = entry['score']
@@ -341,6 +362,10 @@ def contest_lobby(request: HttpRequest, contest_id: int) -> HttpResponse:
         for cp in problems:
             cp.success_rate = 0.0
 
+    is_staff_user = is_contest_staff(request.user, contest)
+    current_strikes = 0 if is_staff_user else (ViolationLog.objects.filter(user=request.user, contest=contest).count() if request.user.is_authenticated else 0)
+    is_user_disqualified = False if is_staff_user else check_disqualified(request.user, contest)
+
     context = {
         'contest': contest,
         'problems': problems,
@@ -357,6 +382,9 @@ def contest_lobby(request: HttpRequest, contest_id: int) -> HttpResponse:
         'user_score': user_score,
         'user_rank': user_rank,
         'user_solved_count': user_solved_count,
+        'is_disqualified': is_user_disqualified,
+        'CURRENT_STRIKES': current_strikes,
+        'IS_CONTEST_STAFF': is_staff_user,
     }
     return render(request, 'home/contest_lobby.html', context)
 
@@ -381,7 +409,8 @@ def enter_contest(request: HttpRequest, contest_id: int) -> JsonResponse:
     # Archived contests don't require a passkey
     if is_archived:
         if request.user.is_authenticated:
-            ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
+            role = 'HOST' if (contest.host_id and contest.host_id == request.user.id) else 'CONTESTANT'
+            ContestParticipation.objects.get_or_create(user=request.user, contest=contest, defaults={'role': role})
         return JsonResponse({'ok': True, 'redirect': reverse('contest_lobby', args=[contest.id])})
 
     provided = request.POST.get('passkey', '') or ''
@@ -389,14 +418,16 @@ def enter_contest(request: HttpRequest, contest_id: int) -> JsonResponse:
     if contest.passkey:
         if provided and provided == contest.passkey:
             if request.user.is_authenticated:
-                ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
+                role = 'HOST' if (contest.host_id and contest.host_id == request.user.id) else 'CONTESTANT'
+                ContestParticipation.objects.get_or_create(user=request.user, contest=contest, defaults={'role': role})
             return JsonResponse({'ok': True, 'redirect': reverse('contest_lobby', args=[contest.id])})
         else:
             return JsonResponse({'ok': False, 'error': 'Invalid passkey'}, status=403)
 
     # No passkey set — allow entry
     if request.user.is_authenticated:
-        ContestParticipation.objects.get_or_create(user=request.user, contest=contest)
+        role = 'HOST' if (contest.host_id and contest.host_id == request.user.id) else 'CONTESTANT'
+        ContestParticipation.objects.get_or_create(user=request.user, contest=contest, defaults={'role': role})
     return JsonResponse({'ok': True, 'redirect': reverse('contest_lobby', args=[contest.id])})
 
 
@@ -414,9 +445,9 @@ def log_violation(request: HttpRequest, contest_id: int) -> JsonResponse:
     if not contest.enable_anti_cheat:
         return JsonResponse({'ok': True, 'action': 'NONE'})
 
-    # Superuser or the host of the contest shouldn't be banned
-    if request.user.is_superuser or request.user.is_staff or (contest.host_id and request.user.id == contest.host_id):
-        return JsonResponse({'ok': True, 'action': 'NONE', 'message': 'Admin or contest host is exempt from banning.'})
+    # Superuser, staff, or contest staff are exempt from banning
+    if is_contest_staff(request.user, contest):
+        return JsonResponse({'ok': True, 'action': 'IGNORE', 'current_strikes': 0, 'message': 'Admin or contest host is exempt from banning.'})
 
     now = timezone.now()
     # Contestant should only be banned till the contest is live
@@ -461,13 +492,8 @@ def unban_contestant(request: HttpRequest, contest_id: int, user_id: Optional[in
     """
     contest = get_object_or_404(Contest, id=contest_id)
 
-    # Strict authorization gate: only superuser, staff, or the contest host
-    is_authorized = (
-        request.user.is_superuser or
-        request.user.is_staff or
-        (contest.host_id and request.user.id == contest.host_id)
-    )
-    if not is_authorized:
+    # Strict authorization gate: only superuser, staff, contest host, or contest managers
+    if not can_manage_contest(request.user, contest):
         return HttpResponseForbidden("Permission denied. Only contest hosts and superusers can unban contestants.")
 
     target_user_id = user_id or request.GET.get('user_id') or request.POST.get('user_id')

@@ -38,12 +38,7 @@ def auth_view(request: HttpRequest) -> HttpResponse:
                 messages.error(request, "Username is already taken.")
                 return render(request, 'home/register.html')
 
-            # 2. Check if Roll No already exists
-            if Profile.objects.filter(roll_no=roll_no).exists():
-                messages.error(request, f"Roll No. {roll_no} is already registered.")
-                return render(request, 'home/register.html')
-
-            # 3. Check if Email already exists
+            # 2. Check if Email already exists
             if User.objects.filter(email__iexact=email).exists():
                 messages.error(request, f"Email {email} is already registered.")
                 return render(request, 'home/register.html')
@@ -284,11 +279,6 @@ def complete_profile(request: HttpRequest) -> HttpResponse:
         # Check email uniqueness if changed
         if User.objects.filter(email__iexact=new_email).exclude(id=request.user.id).exists():
             messages.error(request, f"Email address '{new_email}' is already registered with another account.")
-            return render(request, 'home/complete_profile.html', {'profile': profile})
-
-        # Check roll_no uniqueness if changed
-        if Profile.objects.filter(roll_no=new_roll).exclude(user=request.user).exists():
-            messages.error(request, f"Roll Number '{new_roll}' is already registered.")
             return render(request, 'home/complete_profile.html', {'profile': profile})
 
         # Update User first & last name
